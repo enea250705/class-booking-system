@@ -1,0 +1,122 @@
+import { NextResponse } from "next/server"
+import jwt from "jsonwebtoken"
+import bcrypt from "bcryptjs"
+import { prisma } from "@/lib/prisma"
+import { z } from "zod"
+
+// Schema for validation
+const registerSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  packageType: z.string().optional(),
+})
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+
+    // Validate input
+    const result = registerSchema.safeParse(body)
+    if (!result.success) {
+      return NextResponse.json({ message: result.error.errors[0].message }, { status: 400 })
+    }
+
+    const { name, email, password, packageType } = result.data
+    
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    })
+
+    if (existingUser) {
+      return NextResponse.json({ message: "User with this email already exists" }, { status: 409 })
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    // Create user
+    const user = await prisma.user.create({
+      data: {
+      name,
+      email,
+        password: hashedPassword,
+      role: "user",
+    }
+    })
+    
+    // Create a package based on the packageType
+    if (packageType) {
+      // Define package types
+      const packageTypes: Record<string, { name: string; totalClasses: number; days: number }> = {
+        "8": { name: "8 CrossFit Classes / Month", totalClasses: 8, days: 30 },
+        "12": { name: "12 CrossFit Classes / Month", totalClasses: 12, days: 30 },
+      };
+      
+      if (packageType in packageTypes) {
+        const packageDetails = packageTypes[packageType];
+        
+        // Calculate start and end dates
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + packageDetails.days);
+        
+        // Create the new package
+        await prisma.package.create({
+          data: {
+            userId: user.id,
+            name: packageDetails.name,
+            totalClasses: packageDetails.totalClasses,
+            classesRemaining: packageDetails.totalClasses,
+            startDate,
+            endDate,
+            active: true,
+          },
+        });
+      }
+    }
+    
+    // Generate JWT
+    const token = jwt.sign(
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" }
+    )
+    
+    // Set JWT as HTTP-only cookie
+    const response = NextResponse.json(
+      { 
+        message: "Registration successful",
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        },
+        token 
+      }, 
+      { status: 201 }
+    )
+    
+    response.cookies.set({
+      name: "auth_token",
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    })
+    
+    return response
+  } catch (error) {
+    console.error("Registration error:", error)
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
+  }
+}
