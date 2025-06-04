@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { sendEmail } from "@/lib/email"
+import { subDays, startOfWeek, endOfWeek } from "date-fns"
 
 export async function checkExpiringSubscriptions() {
   try {
@@ -107,6 +108,75 @@ The GymXam Team
   }
 }
 
+// New function to delete past class weeks
+export async function deletePastClasses() {
+  try {
+    console.log("Starting cleanup of past classes")
+    
+    // Get date for one week ago
+    const oneWeekAgo = subDays(new Date(), 7)
+    
+    // Find all classes that ended before one week ago
+    const pastClasses = await prisma.class.findMany({
+      where: {
+        date: {
+          lt: oneWeekAgo
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        date: true,
+      }
+    })
+    
+    console.log(`Found ${pastClasses.length} classes older than one week to delete`)
+    
+    if (pastClasses.length === 0) {
+      console.log("No past classes to delete")
+      return
+    }
+    
+    // Extract class IDs for deletion
+    const classIds = pastClasses.map(cls => cls.id)
+    
+    // Delete bookings for these classes first (handling foreign key constraints)
+    const deletedBookings = await prisma.booking.deleteMany({
+      where: {
+        classId: {
+          in: classIds
+        }
+      }
+    })
+    
+    console.log(`Deleted ${deletedBookings.count} bookings associated with past classes`)
+    
+    // Delete waitlist entries for these classes
+    const deletedWaitlist = await prisma.waitlist.deleteMany({
+      where: {
+        classId: {
+          in: classIds
+        }
+      }
+    })
+    
+    console.log(`Deleted ${deletedWaitlist.count} waitlist entries associated with past classes`)
+    
+    // Now delete the classes
+    const result = await prisma.class.deleteMany({
+      where: {
+        id: {
+          in: classIds
+        }
+      }
+    })
+    
+    console.log(`Successfully deleted ${result.count} past classes`)
+  } catch (error) {
+    console.error("Error deleting past classes:", error)
+  }
+}
+
 // Setup all cron jobs
 export function setupCronJobs() {
   // Schedule the expiring subscriptions check to run every day at 9:00 AM
@@ -130,4 +200,23 @@ export function setupCronJobs() {
   }, timeUntilCheck)
   
   console.log(`Scheduled subscription expiration check for ${new Date(Date.now() + timeUntilCheck).toLocaleString()}`)
+  
+  // Schedule past classes deletion to run every Sunday at midnight
+  const sundayMidnight = new Date()
+  sundayMidnight.setDate(sundayMidnight.getDate() + (7 - sundayMidnight.getDay()) % 7) // Next Sunday
+  sundayMidnight.setHours(0, 0, 0, 0) // Midnight
+  
+  // Calculate time until next Sunday midnight
+  const timeUntilCleanup = sundayMidnight.getTime() - Date.now()
+  
+  // Schedule the first cleanup
+  setTimeout(() => {
+    // Run the cleanup
+    deletePastClasses()
+    
+    // Then set up an interval to run every 7 days (weekly)
+    setInterval(deletePastClasses, 7 * 24 * 60 * 60 * 1000)
+  }, timeUntilCleanup)
+  
+  console.log(`Scheduled past classes cleanup for ${new Date(Date.now() + timeUntilCleanup).toLocaleString()} (every Sunday)`)
 }

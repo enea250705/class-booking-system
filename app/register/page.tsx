@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/auth"
 
 export default function RegisterPage() {
@@ -21,8 +21,39 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [shouldRedirect, setShouldRedirect] = useState(false)
+  const [packages, setPackages] = useState({
+    package8Price: "120",
+    package12Price: "160", 
+    packageDuration: "30"
+  })
   const router = useRouter()
   const { register, user } = useAuth()
+
+  // Fetch package prices from admin settings
+  useEffect(() => {
+    const fetchPackagePrices = async () => {
+      try {
+        const response = await fetch('/api/packages/prices', {
+          headers: {
+            'Cache-Control': 'no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.prices) {
+            setPackages(data.prices);
+          }
+        }
+      } catch (error) {
+        console.log('Using default package prices');
+        // Keep default prices if API fails
+      }
+    };
+
+    fetchPackagePrices();
+  }, [])
 
   // Handle redirection after registration in useEffect
   useEffect(() => {
@@ -110,30 +141,34 @@ export default function RegisterPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Choose your CrossFit membership</Label>
-                  <RadioGroup
-                    value={packageType}
+                  <Label>Class Package</Label>
+                  <RadioGroup 
+                    value={packageType} 
                     onValueChange={setPackageType}
-                    className="grid grid-cols-2 gap-4 pt-2"
+                    className="flex flex-col space-y-1"
                   >
-                    <div>
-                      <RadioGroupItem value="8" id="package-8" className="peer sr-only" />
-                      <Label
-                        htmlFor="package-8"
-                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                      >
-                        <span className="text-xl font-bold">8</span>
-                        <span className="text-sm">CrossFit Classes</span>
+                    <div className="flex items-center space-x-2 rounded-md border p-3">
+                      <RadioGroupItem value="8" id="package-8" />
+                      <Label htmlFor="package-8" className="flex-1 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium">8 Classes / Month</div>
+                            <div className="text-sm text-muted-foreground">Standard Package</div>
+                          </div>
+                          <div className="text-lg font-bold text-primary">€{packages.package8Price}</div>
+                        </div>
                       </Label>
                     </div>
-                    <div>
-                      <RadioGroupItem value="12" id="package-12" className="peer sr-only" />
-                      <Label
-                        htmlFor="package-12"
-                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                      >
-                        <span className="text-xl font-bold">12</span>
-                        <span className="text-sm">CrossFit Classes</span>
+                    <div className="flex items-center space-x-2 rounded-md border p-3">
+                      <RadioGroupItem value="12" id="package-12" />
+                      <Label htmlFor="package-12" className="flex-1 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium">12 Classes / Month</div>
+                            <div className="text-sm text-muted-foreground">Premium Package</div>
+                          </div>
+                          <div className="text-lg font-bold text-primary">€{packages.package12Price}</div>
+                        </div>
                       </Label>
                     </div>
                   </RadioGroup>

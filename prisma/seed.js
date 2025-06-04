@@ -22,7 +22,8 @@ async function main() {
       name: 'Admin User',
       email: 'admin@example.com',
       password: adminPassword,
-      role: 'admin'
+      role: 'admin',
+      approved: true
     }
   });
   

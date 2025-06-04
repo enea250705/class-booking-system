@@ -1,9 +1,50 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check } from "lucide-react"
 
+interface PackagePrices {
+  package8Price: string;
+  package12Price: string;
+  packageDuration: string;
+}
+
 export default function PricingPage() {
+  const [packages, setPackages] = useState<PackagePrices>({
+    package8Price: "120",
+    package12Price: "160", 
+    packageDuration: "30"
+  })
+
+  // Fetch package prices from admin settings
+  useEffect(() => {
+    const fetchPackagePrices = async () => {
+      try {
+        const response = await fetch('/api/packages/prices', {
+          headers: {
+            'Cache-Control': 'no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.prices) {
+            setPackages(data.prices);
+          }
+        }
+      } catch (error) {
+        console.log('Using default package prices');
+        // Keep default prices if API fails
+      }
+    };
+
+    fetchPackagePrices();
+  }, [])
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -41,7 +82,7 @@ export default function PricingPage() {
           <div className="space-y-2 text-center">
             <h1 className="text-3xl font-bold tracking-tight">Choose Your CrossFit Plan</h1>
             <p className="text-muted-foreground max-w-[700px] mx-auto">
-              Select the plan that fits your schedule. All plans are valid for 30 days and require payment in cash at the studio.
+              Select the plan that fits your schedule. All plans are valid for {packages.packageDuration} days and require payment in cash at the studio.
             </p>
           </div>
 
@@ -49,9 +90,10 @@ export default function PricingPage() {
             <Card className="flex flex-col">
               <CardHeader>
                 <CardTitle className="text-2xl">8 CrossFit Classes / Month</CardTitle>
+                <div className="text-3xl font-bold text-primary">€{packages.package8Price}</div>
+                <p className="text-sm text-muted-foreground">Cash payment at studio</p>
               </CardHeader>
               <CardContent className="flex-1">
-                <div className="text-xl font-bold mb-6">Cash payment at studio</div>
                 <ul className="space-y-2">
                   <li className="flex items-center">
                     <Check className="mr-2 h-5 w-5 text-primary" />
@@ -85,9 +127,10 @@ export default function PricingPage() {
             <Card className="flex flex-col border-primary">
               <CardHeader>
                 <CardTitle className="text-2xl">12 CrossFit Classes / Month</CardTitle>
+                <div className="text-3xl font-bold text-primary">€{packages.package12Price}</div>
+                <p className="text-sm text-muted-foreground">Cash payment at studio</p>
               </CardHeader>
               <CardContent className="flex-1">
-                <div className="text-xl font-bold mb-6">Cash payment at studio</div>
                 <ul className="space-y-2">
                   <li className="flex items-center">
                     <Check className="mr-2 h-5 w-5 text-primary" />

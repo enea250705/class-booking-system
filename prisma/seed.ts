@@ -44,7 +44,8 @@ async function main() {
       name: 'Admin User',
       email: 'gymxam@gmail.com',
       password: adminPassword,
-      role: 'admin'
+      role: 'admin',
+      approved: true
     }
   });
   console.log(`✓ Created admin user (ID: ${admin.id})`);

@@ -1,5 +1,7 @@
 "use client"
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -80,24 +82,6 @@ function DashboardSidebar({ user }: { user: any }) {
           <Link href="/classes" className="flex items-center rounded-lg px-3 py-2 text-white bg-white/10 transition-colors">
             <CalendarDays className="h-5 w-5 mr-3 text-primary" />
             <span>Classes</span>
-          </Link>
-          
-          <Link href="/bookings" className="flex items-center rounded-lg px-3 py-2 text-white/70 hover:text-white hover:bg-white/10 transition-colors">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5 mr-3 text-white/50"
-            >
-              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-              <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-              <path d="M9 14l2 2 4-4" />
-            </svg>
-            <span>My Bookings</span>
           </Link>
         </div>
       </nav>
@@ -199,26 +183,8 @@ function MobileMenu({ isOpen, onClose, user }: { isOpen: boolean, onClose: () =>
           <Link href="/classes" className="flex items-center py-2 text-white" onClick={onClose}>
             <CalendarDays className="h-5 w-5 mr-3 text-primary" />
             <span>Classes</span>
-              </Link>
-          
-          <Link href="/bookings" className="flex items-center py-2 text-white/80 hover:text-white" onClick={onClose}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5 mr-3 text-white/50"
-            >
-              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-              <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-              <path d="M9 14l2 2 4-4" />
-            </svg>
-            <span>My Bookings</span>
-              </Link>
-            </nav>
+          </Link>
+        </nav>
         
         <div className="absolute bottom-8 left-0 w-full px-6">
           <LogoutButton variant="ghost" className="w-full justify-center text-white hover:bg-white/10" />
@@ -229,7 +195,25 @@ function MobileMenu({ isOpen, onClose, user }: { isOpen: boolean, onClose: () =>
 }
 
 // ClassCard component
-function ClassCard({ cls }: { cls: ClassListing }) {
+function ClassCard({ 
+  cls, 
+  onBook, 
+  onJoinWaitlist, 
+  userCanBook, 
+  isBooking, 
+  isJoiningWaitlist, 
+  waitlistPosition,
+  bookingClassId
+}: { 
+  cls: ClassListing, 
+  onBook: (cls: ClassListing) => void, 
+  onJoinWaitlist: (classId: string) => void, 
+  userCanBook: boolean, 
+  isBooking: boolean, 
+  isJoiningWaitlist: boolean, 
+  waitlistPosition: number | null,
+  bookingClassId: string | null
+}) {
   return (
     <Card className="bg-black/40 backdrop-blur-md border-white/10 shadow-lg hover:shadow-xl transition-all group overflow-hidden h-full flex flex-col">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -276,20 +260,50 @@ function ClassCard({ cls }: { cls: ClassListing }) {
         </div>
         
         {cls.coach && (
-          <div className="flex items-center text-sm text-white/80">
-            <User className="h-4 w-4 mr-2 text-primary/80" />
-            <span>Coach {cls.coach}</span>
+          <div className="flex items-center">
+            <User className="mr-1.5 h-4 w-4 text-primary/80" />
+            <span>{cls.coach}</span>
           </div>
         )}
       </CardContent>
       
       <CardFooter>
-        <Link href={`/classes/${cls.id}`} className="w-full">
-          <Button className="w-full bg-white/20 hover:bg-white/30 text-white group-hover:bg-white/30 transition-colors">
-            <span>View Details</span>
+        {userCanBook ? (
+          <Button 
+            className="w-full bg-white/20 hover:bg-white/30 text-white group-hover:bg-white/30 transition-colors" 
+            onClick={() => onBook(cls)}
+            disabled={isBooking && bookingClassId === cls.id}
+          >
+            {isBooking && bookingClassId === cls.id ? (
+              <span className="flex items-center justify-center">
+                <div className="h-4 w-4 border-2 border-current border-r-transparent rounded-full animate-spin mr-2"></div>
+                Booking...
+              </span>
+            ) : (
+              <>
+                <span>Book</span>
+                <ArrowRight className="h-4 w-4 ml-2 opacity-70 group-hover:translate-x-0.5 transition-transform" />
+              </>
+            )}
+          </Button>
+        ) : isJoiningWaitlist ? (
+          <Button className="w-full bg-white/20 hover:bg-white/30 text-white group-hover:bg-white/30 transition-colors" disabled>
+            <span>Joining Waitlist...</span>
+          </Button>
+        ) : waitlistPosition !== null ? (
+          <Button className="w-full bg-white/20 hover:bg-white/30 text-white group-hover:bg-white/30 transition-colors" disabled>
+            <span>Waitlisted (#{waitlistPosition})</span>
+          </Button>
+        ) : (
+          <Button 
+            className="w-full bg-white/20 hover:bg-white/30 text-white group-hover:bg-white/30 transition-colors" 
+            onClick={() => onJoinWaitlist(cls.id)}
+            disabled={isJoiningWaitlist}
+          >
+            <span>Join Waitlist</span>
             <ArrowRight className="h-4 w-4 ml-2 opacity-70 group-hover:translate-x-0.5 transition-transform" />
           </Button>
-        </Link>
+        )}
       </CardFooter>
     </Card>
   );
@@ -306,6 +320,10 @@ export default function ClassesPage() {
   const [dayFilter, setDayFilter] = useState("all")
   const [levelFilter, setLevelFilter] = useState("all")
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isJoiningWaitlist, setIsJoiningWaitlist] = useState(false)
+  const [waitlistedClasses, setWaitlistedClasses] = useState<Record<string, number>>({})
+  const [isBooking, setIsBooking] = useState(false)
+  const [bookingClassId, setBookingClassId] = useState<string | null>(null)
   
   useEffect(() => {
     if (!authLoading && user) {
@@ -331,7 +349,31 @@ export default function ClassesPage() {
       const sortedClasses = data.sort((a: ClassListing, b: ClassListing) => {
         const dateA = new Date(a.date).getTime()
         const dateB = new Date(b.date).getTime()
-        return dateA - dateB
+        
+        // First compare dates
+        if (dateA !== dateB) {
+          return dateA - dateB
+        }
+        
+        // If dates are the same, sort by time (properly handling AM/PM)
+        const getTimeValue = (timeStr: string) => {
+          // Handle cases where timeStr might not have the expected format
+          if (!timeStr || !timeStr.includes(':')) return 0
+          
+          const parts = timeStr.split(' ')
+          const time = parts[0]
+          const period = parts.length > 1 ? parts[1] : ''
+          
+          let [hours, minutes] = time.split(':').map(Number)
+          
+          // Convert to 24-hour format for proper comparison
+          if (period === 'PM' && hours < 12) hours += 12
+          if (period === 'AM' && hours === 12) hours = 0
+          
+          return hours * 60 + minutes
+        }
+        
+        return getTimeValue(a.time) - getTimeValue(b.time)
       })
       
       setClasses(sortedClasses)
@@ -377,6 +419,155 @@ export default function ClassesPage() {
     setFilteredClasses(result)
   }, [classes, searchTerm, dayFilter, levelFilter])
   
+  // Function to fetch user's waitlisted classes
+  const fetchUserWaitlists = async () => {
+    try {
+      const response = await fetch('/api/classes/waitlist', {
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Create a map of classId -> position
+        const waitlistMap: Record<string, number> = {};
+        data.forEach((entry: any) => {
+          waitlistMap[entry.classId] = entry.position;
+        });
+        
+        setWaitlistedClasses(waitlistMap);
+      }
+    } catch (error) {
+      console.error("Error fetching waitlists:", error);
+    }
+  };
+
+  // Update useEffect to fetch waitlists
+  useEffect(() => {
+    if (user) {
+      fetchClasses();
+      fetchUserWaitlists();
+    }
+  }, [user]);
+
+  // Function to join the waitlist for a class
+  const handleJoinWaitlist = async (classId: string) => {
+    try {
+      setIsJoiningWaitlist(true);
+      
+      const response = await fetch('/api/classes/waitlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ classId })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to join waitlist');
+      }
+      
+      // Update UI to show user is on waitlist
+      setWaitlistedClasses({
+        ...waitlistedClasses,
+        [classId]: data.position
+      });
+      
+      toast({
+        title: "Joined Waitlist",
+        description: `You are #${data.position} on the waitlist. We'll notify you if a spot becomes available.`,
+      });
+      
+      // Refresh the classes to show updated status
+      fetchClasses();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to join waitlist",
+        variant: "destructive"
+      });
+    } finally {
+      setIsJoiningWaitlist(false);
+    }
+  };
+  
+  // Handle booking a class
+  const handleBookClass = async (cls: ClassListing) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to book classes",
+        variant: "destructive"
+      });
+      router.push('/login');
+      return;
+    }
+    
+    try {
+      setIsBooking(true);
+      setBookingClassId(cls.id);
+      
+      // Ensure classId is a string
+      const classIdString = String(cls.id);
+      console.log("Booking class with ID:", classIdString, "Type:", typeof classIdString);
+      
+      // Book the class
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ classId: classIdString }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // If class is full but can join waitlist
+        if (data.isFull && data.canJoinWaitlist) {
+          toast({
+            title: "Class Full",
+            description: "This class is fully booked. You can join the waitlist.",
+            variant: "default"
+          });
+          return;
+        }
+        throw new Error(data.error || 'Failed to book class');
+      }
+      
+      toast({
+        title: "Class Booked",
+        description: `You have successfully booked ${cls.name}`,
+        variant: "success"
+      });
+      
+      // Update local state
+      setClasses(classes.map(c => 
+        c.id === cls.id 
+          ? { ...c, isBooked: true } 
+          : c
+      ));
+      
+      // Refresh data
+      await fetchClasses();
+      
+    } catch (error: any) {
+      console.error('Error booking class:', error);
+      toast({
+        title: "Booking Failed",
+        description: error.message || "Failed to book class. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsBooking(false);
+      setBookingClassId(null);
+    }
+  };
+  
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Background image */}
@@ -391,14 +582,19 @@ export default function ClassesPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-black via-black/95 to-black/90"></div>
       </div>
       
-      {/* Desktop sidebar */}
-      <DashboardSidebar user={user} />
-      
-      {/* Mobile header */}
-      <MobileHeader user={user} setIsMobileMenuOpen={setIsMobileMenuOpen} />
-      
-      {/* Mobile menu */}
-      <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} user={user} />
+      {/* Only render sidebar and other components if user is available */}
+      {user && (
+        <>
+          {/* Desktop sidebar */}
+          <DashboardSidebar user={user} />
+          
+          {/* Mobile header */}
+          <MobileHeader user={user} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+          
+          {/* Mobile menu */}
+          <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} user={user} />
+        </>
+      )}
       
       <main className="lg:pl-64 min-h-screen">
         <div className="container mx-auto p-4 sm:p-6 lg:p-8 max-w-6xl">
@@ -465,7 +661,17 @@ export default function ClassesPage() {
             ) : filteredClasses.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredClasses.map((cls) => (
-                  <ClassCard key={cls.id} cls={cls} />
+                  <ClassCard
+                    key={cls.id}
+                    cls={cls}
+                    onBook={handleBookClass}
+                    onJoinWaitlist={handleJoinWaitlist}
+                    userCanBook={true}
+                    isBooking={isBooking}
+                    isJoiningWaitlist={isJoiningWaitlist}
+                    waitlistPosition={waitlistedClasses[cls.id] || null}
+                    bookingClassId={bookingClassId}
+                  />
                 ))}
                     </div>
             ) : (

@@ -1,5 +1,7 @@
 "use client"
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -12,6 +14,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/lib/auth"
 import { LogoutButton } from "@/components/logout-button"
 import { useToast } from "@/components/ui/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 // Define types
 interface BookedClass {
@@ -91,24 +104,6 @@ function DashboardSidebar({ user }: { user: any }) {
           <Link href="/classes" className="flex items-center rounded-lg px-3 py-2 text-white/70 hover:text-white hover:bg-white/10 transition-colors">
             <CalendarDays className="h-5 w-5 mr-3 text-white/50" />
             <span>CrossFit Classes</span>
-          </Link>
-          
-          <Link href="/bookings" className="flex items-center rounded-lg px-3 py-2 text-white bg-white/10 transition-colors">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5 mr-3 text-primary"
-            >
-              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-              <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-              <path d="M9 14l2 2 4-4" />
-            </svg>
-            <span>My Bookings</span>
           </Link>
         </div>
       </nav>
@@ -211,24 +206,6 @@ function MobileMenu({ isOpen, onClose, user }: { isOpen: boolean, onClose: () =>
             <CalendarDays className="h-5 w-5 mr-3 text-white/50" />
             <span>CrossFit Classes</span>
           </Link>
-          
-          <Link href="/bookings" className="flex items-center py-2 text-white" onClick={onClose}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5 mr-3 text-primary"
-            >
-              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-              <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-              <path d="M9 14l2 2 4-4" />
-            </svg>
-            <span>My Bookings</span>
-          </Link>
         </nav>
         
         <div className="absolute bottom-8 left-0 w-full px-6">
@@ -263,7 +240,7 @@ function BookedClassCard({ booking, onCancel, isLoading }: {
         <div className="flex flex-wrap items-center gap-4 text-sm text-white/70 mt-1 mb-3">
           <div className="flex items-center">
             <CalendarDays className="mr-1.5 h-4 w-4 text-primary/80" />
-            <span>{booking.date}</span>
+            <span>{new Date(booking.date).toLocaleDateString()}</span>
           </div>
           <div className="flex items-center">
             <Clock className="mr-1.5 h-4 w-4 text-primary/80" />
@@ -272,7 +249,7 @@ function BookedClassCard({ booking, onCancel, isLoading }: {
           {booking.coach && (
             <div className="flex items-center">
               <User className="mr-1.5 h-4 w-4 text-primary/80" />
-              <span>Coach {booking.coach}</span>
+              <span>{booking.coach}</span>
             </div>
           )}
         </div>
@@ -285,25 +262,61 @@ function BookedClassCard({ booking, onCancel, isLoading }: {
       </CardContent>
       
       <CardFooter className="pt-1 pb-6 flex flex-col gap-3">
-        <Button
-          variant="outline"
-          onClick={() => onCancel(booking.id)}
-          className="w-full bg-transparent border border-white/20 text-white hover:bg-red-500/20 hover:border-red-500/30 hover:text-white transition-colors"
-          size="sm"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <span className="flex items-center gap-1.5">
-              <div className="h-3 w-3 rounded-full border-2 border-current border-r-transparent animate-spin"></div>
-              <span>Cancelling...</span>
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              <X className="h-3.5 w-3.5" />
-              Cancel Booking
-            </span>
-          )}
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full bg-transparent border border-white/20 text-white hover:bg-red-500/20 hover:border-red-500/30 hover:text-white transition-colors"
+              size="sm"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-1.5">
+                  <div className="h-3 w-3 rounded-full border-2 border-current border-r-transparent animate-spin"></div>
+                  <span>Cancelling...</span>
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <X className="h-3.5 w-3.5" />
+                  Cancel Booking
+                </span>
+              )}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent className="bg-black/95 border-white/30 text-white max-w-[95%] w-[340px] sm:max-w-md rounded-lg shadow-xl p-5 sm:p-6 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0">
+            <AlertDialogHeader className="pb-3">
+              <AlertDialogTitle className="text-xl text-center text-white">Cancel Class Booking</AlertDialogTitle>
+              <AlertDialogDescription className="text-white/80 text-center mt-2">
+                Are you sure you want to cancel your booking for:
+                <div className="mt-4 mb-4 p-4 bg-white/10 rounded-lg border border-white/20">
+                  <h3 className="font-medium text-white text-base sm:text-lg">{booking.className}</h3>
+                  <div className="mt-3 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-white/70 text-sm">
+                    <div className="flex items-center">
+                      <CalendarDays className="mr-1.5 h-4 w-4 text-primary/80" />
+                      <span>{new Date(booking.date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Clock className="mr-1.5 h-4 w-4 text-primary/80" />
+                      <span>{booking.time}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 p-3 sm:p-4 bg-amber-900/40 border border-amber-500/40 rounded-md text-amber-200 text-xs sm:text-sm">
+                  A class credit will be returned to your account.
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex flex-col sm:flex-row gap-3 sm:gap-2 mt-5">
+              <AlertDialogCancel className="bg-transparent border-white/30 text-white/90 hover:bg-white/10 hover:text-white sm:mr-2 order-2 sm:order-1 w-full sm:w-auto h-11">Keep Booking</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => onCancel(booking.id)}
+                className="bg-red-500/80 hover:bg-red-500 text-white border-none order-1 sm:order-2 w-full sm:w-auto h-11"
+              >
+                Confirm Cancellation
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         
         <Link href={`/classes/${booking.classId}`} className="w-full">
           <Button 
@@ -326,6 +339,8 @@ const BookingsPage = () => {
   const [error, setError] = useState("");
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -375,13 +390,37 @@ const BookingsPage = () => {
     setCancelingId(bookingId);
     
     try {
-      const response = await fetch(`/api/bookings/${bookingId}`, {
-        method: 'DELETE',
+      // Get the booking details first to know the class ID
+      const bookingDetails = bookings.find(b => b.id === bookingId);
+      
+      if (!bookingDetails) {
+        throw new Error("Booking details not found");
+      }
+      
+      // Use the class-based cancellation endpoint for consistency
+      const response = await fetch(`/api/bookings/cancel-by-class`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ classId: bookingDetails.classId }),
       });
       
+      const data = await response.json();
+      
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to cancel booking');
+        const errorMessage = data.error || 'Failed to cancel booking';
+        console.error("Cancellation error:", errorMessage);
+        
+        // Show a more specific error message
+        let userMessage = errorMessage;
+        if (errorMessage.includes("Booking not found for this class")) {
+          userMessage = "No active booking found for this class.";
+        } else if (errorMessage.includes("allowed at least 8 hours")) {
+          userMessage = "Cancellations must be made at least 8 hours before the class starts.";
+        }
+        
+        throw new Error(userMessage);
       }
       
       // Remove the canceled booking from state
@@ -391,7 +430,7 @@ const BookingsPage = () => {
       toast({
         title: "Booking Cancelled",
         description: "Your CrossFit class booking has been successfully cancelled.",
-        status: "success",
+        variant: "success",
       });
     } catch (err: any) {
       console.error("Error canceling booking:", err);
@@ -399,7 +438,7 @@ const BookingsPage = () => {
       toast({
         title: "Error",
         description: err.message || "Failed to cancel your CrossFit class booking. Please try again.",
-        status: "error",
+        variant: "destructive",
       });
     } finally {
       setCancelingId(null);

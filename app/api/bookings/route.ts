@@ -20,15 +20,15 @@ export async function GET(request: Request) {
       )
     }
 
-    // Fetch all bookings for the current user
+    console.log("Fetching bookings for user:", user.id);
+
+    // Fetch all bookings for the current user without filtering for future dates
+    // to ensure we retrieve all bookings
     const bookings = await prisma.booking.findMany({
       where: {
         userId: user.id,
-        // Only include active bookings for classes in the future
+        // Only include active bookings (removed date filter)
         class: {
-          date: {
-            gte: new Date()
-          },
           enabled: true
         }
       },
@@ -42,7 +42,21 @@ export async function GET(request: Request) {
       }
     })
 
-    return NextResponse.json(bookings)
+    console.log(`Found ${bookings.length} bookings for user ${user.id}`);
+    if (bookings.length > 0) {
+      console.log("First booking:", {
+        id: bookings[0].id,
+        classId: bookings[0].classId,
+        className: bookings[0].class.name
+      });
+    }
+
+    return NextResponse.json(bookings, {
+      headers: {
+        'Cache-Control': 'no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    })
   } catch (error) {
     console.error("Error fetching bookings:", error)
     return NextResponse.json(
@@ -93,14 +107,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if class is full
-    if (classInfo.currentBookings >= classInfo.capacity) {
-      return NextResponse.json(
-        { error: "This class is fully booked" },
-        { status: 400 }
-      )
-    }
-
     // Check if user already has a booking for this class
     const existingBooking = await prisma.booking.findFirst({
       where: {
@@ -112,6 +118,33 @@ export async function POST(request: Request) {
     if (existingBooking) {
       return NextResponse.json(
         { error: "You have already booked this class" },
+        { status: 400 }
+      )
+    }
+
+    // Check if user is already on the waitlist
+    const existingWaitlist = await prisma.waitlist.findFirst({
+      where: {
+        userId: user.id,
+        classId,
+      }
+    })
+
+    if (existingWaitlist) {
+      return NextResponse.json(
+        { error: "You are already on the waitlist for this class" },
+        { status: 400 }
+      )
+    }
+
+    // Check if class is full
+    if (classInfo.currentBookings >= classInfo.capacity) {
+      return NextResponse.json(
+        { 
+          error: "This class is fully booked", 
+          isFull: true,
+          canJoinWaitlist: true
+        },
         { status: 400 }
       )
     }
@@ -132,37 +165,48 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
-    
-    // Start a transaction to create booking, decrement classes remaining, and update class capacity
+
+    // Use a transaction to ensure all operations succeed or fail together
     const booking = await prisma.$transaction(async (tx) => {
-    // Create the booking
+      // Create the booking
       const newBooking = await tx.booking.create({
         data: {
-      userId: user.id,
-      classId,
+          userId: user.id,
+          classId,
         },
+        include: {
+          class: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
       })
-      
-      // Update the class's current bookings
+
+      // Increment the class current bookings
       await tx.class.update({
         where: { id: classId },
-        data: {
-          currentBookings: {
-            increment: 1,
-          },
-        },
+        data: { currentBookings: { increment: 1 } }
       })
-      
-      // Decrement the user's remaining classes
+
+      // Decrement the user's remaining classes in their package
       await tx.package.update({
         where: { id: userPackage.id },
-        data: {
-          classesRemaining: {
-            decrement: 1,
-          },
-        },
+        data: { classesRemaining: { decrement: 1 } }
       })
-      
+
+      // Create a notification
+      await tx.notification.create({
+        data: {
+          userId: user.id,
+          type: "booking_confirmed",
+          message: `Your booking for ${newBooking.class.name} on ${new Date(newBooking.class.date).toLocaleDateString()} at ${newBooking.class.time} has been confirmed.`,
+        }
+      })
+
       return newBooking
     })
 
@@ -207,7 +251,10 @@ Thank you for choosing GymXam!`,
       `
     });
 
-    return NextResponse.json(booking, { status: 201 })
+    return NextResponse.json({
+      message: "Booking created successfully",
+      booking
+    })
   } catch (error) {
     console.error("Error creating booking:", error)
     return NextResponse.json(

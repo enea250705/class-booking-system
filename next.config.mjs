@@ -8,7 +8,11 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    domains: ['images.unsplash.com', 'via.placeholder.com'],
   },
+  reactStrictMode: true,
+  output: 'standalone',
+  staticPageGenerationTimeout: 1,
 }
 
 export default nextConfig

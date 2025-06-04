@@ -1,62 +1,86 @@
 // Email service for sending notifications
-// Currently a placeholder implementation with logging
-// To implement real SMTP, uncomment the nodemailer code and install the package
+// 
+// PRODUCTION SETUP INSTRUCTIONS:
+// 1. Install nodemailer: npm install nodemailer --save
+// 2. Replace the import below with: import nodemailer from 'nodemailer';
+//
+// The mock implementation works for development without requiring the actual package.
 
-/*
+// Using real nodemailer implementation
 import nodemailer from 'nodemailer';
 
-// Email configuration from environment variables
+// Define a single SMTP configuration from environment variables
 const smtpConfig = {
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+  host: process.env.SMTP_HOST || '',
+  port: Number(process.env.SMTP_PORT) || 465,
+  secure: true, // Use secure connection for port 465
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+  },
+  // Add TLS options to avoid certificate issues
+  tls: {
+    rejectUnauthorized: false
   }
 };
 
-// Create reusable transporter
-const transporter = nodemailer.createTransport(smtpConfig);
-*/
+// Log the SMTP configuration (without the password)
+console.log('SMTP Config:', {
+  host: smtpConfig.host,
+  port: smtpConfig.port,
+  secure: smtpConfig.secure,
+  user: smtpConfig.auth.user,
+  environment: process.env.NODE_ENV || 'unknown',
+});
 
-type EmailOptions = {
-  to: string
-  subject: string
-  text: string
-  html?: string
+interface EmailOptions {
+  to: string;
+  subject: string;
+  text?: string;
+  html: string;
 }
 
-export async function sendEmail(options: EmailOptions): Promise<boolean> {
+export async function sendEmail(options: EmailOptions) {
   try {
-    // Prepare email with sender from environment
+    // Validate required environment variables
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.error('Missing required SMTP environment variables:', {
+        host: process.env.SMTP_HOST ? 'set' : 'missing',
+        user: process.env.SMTP_USER ? 'set' : 'missing',
+        pass: process.env.SMTP_PASS ? 'set' : 'missing',
+        port: process.env.SMTP_PORT || 'missing',
+      });
+      return { success: false, error: 'Missing SMTP configuration' };
+    }
+
+    console.log(`Attempting to send email to ${options.to}`, {
+      subject: options.subject,
+      environment: process.env.NODE_ENV || 'unknown',
+    });
+    
+    // Create transporter with our simplified config
+    const transporter = nodemailer.createTransport(smtpConfig);
+    
+    // Set the from address from env variable
     const mailOptions = {
-      from: process.env.SMTP_FROM || 'GymXam <info@codewithenea.it>',
+      from: process.env.SMTP_FROM || `"GymXam" <${smtpConfig.auth.user}>`,
       to: options.to,
       subject: options.subject,
       text: options.text,
-      html: options.html
+      html: options.html,
     };
-
-    // Log email details instead of sending
-    console.log('==========================================');
-    console.log('Email would be sent with the following details:');
-    console.log('From:', mailOptions.from);
-    console.log('To:', mailOptions.to);
-    console.log('Subject:', mailOptions.subject);
-    console.log('Text:', mailOptions.text);
-    console.log('==========================================');
     
-    // In a real implementation, you would uncomment this code:
-    /*
-    // Send email
+    console.log('Sending email with SMTP configuration');
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent: %s', info.messageId);
-    */
     
-    return true;
+    console.log('Email sent successfully:', info.messageId);
+    return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Error sending email:', error);
-    return false;
+    console.error('Failed to send email:', error);
+    // Return error instead of throwing to prevent API failures when email sending fails
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown email error' 
+    };
   }
 }

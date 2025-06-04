@@ -43,37 +43,59 @@ export async function POST(request: Request) {
       email,
         password: hashedPassword,
       role: "user",
-    }
+        approved: false,
+      }
+    })
+
+    // Create notification for admins about new user registration
+    await prisma.notification.create({
+      data: {
+        userId: user.id,
+        type: "registration",
+        message: `New user registered: ${name} (${email}). Waiting for approval.`,
+      }
     })
     
-    // Create a package based on the packageType
+    // Create package for the new user based on selected package type
+    let userPackage = null;
     if (packageType) {
-      // Define package types
-      const packageTypes: Record<string, { name: string; totalClasses: number; days: number }> = {
-        "8": { name: "8 CrossFit Classes / Month", totalClasses: 8, days: 30 },
-        "12": { name: "12 CrossFit Classes / Month", totalClasses: 12, days: 30 },
-      };
-      
-      if (packageType in packageTypes) {
-        const packageDetails = packageTypes[packageType];
+      try {
+        console.log(`Creating package for new user ${user.email} with package type: ${packageType}`);
         
-        // Calculate start and end dates
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setDate(endDate.getDate() + packageDetails.days);
+        // Define package types
+        const packageTypes: Record<string, { name: string; totalClasses: number; days: number }> = {
+          "8": { name: "8 CrossFit Classes / Month", totalClasses: 8, days: 30 },
+          "12": { name: "12 CrossFit Classes / Month", totalClasses: 12, days: 30 },
+        };
         
-        // Create the new package
-        await prisma.package.create({
-          data: {
-            userId: user.id,
-            name: packageDetails.name,
-            totalClasses: packageDetails.totalClasses,
-            classesRemaining: packageDetails.totalClasses,
-            startDate,
-            endDate,
-            active: true,
-          },
-        });
+        if (packageType in packageTypes) {
+          const packageDetails = packageTypes[packageType];
+          
+          // Calculate start and end dates
+          const startDate = new Date();
+          const endDate = new Date();
+          endDate.setDate(endDate.getDate() + packageDetails.days);
+          
+          // Create the new package
+          userPackage = await prisma.package.create({
+            data: {
+              userId: user.id,
+              name: packageDetails.name,
+              totalClasses: packageDetails.totalClasses,
+              classesRemaining: packageDetails.totalClasses,
+              startDate,
+              endDate,
+              active: true,
+            },
+          });
+          
+          console.log(`Successfully created package ID: ${userPackage.id} for new user: ${user.email}`);
+        } else {
+          console.warn(`Unknown package type: ${packageType} for user ${user.email}`);
+        }
+      } catch (packageError) {
+        console.error(`ERROR creating package for user ${user.email}:`, packageError);
+        // Continue with registration even if package creation fails
       }
     }
     
@@ -85,21 +107,21 @@ export async function POST(request: Request) {
         email: user.email,
         role: user.role,
       },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" }
+      process.env.JWT_SECRET || 'fallback_secret_for_development',
+      { expiresIn: "30d" }
     )
     
-    // Set JWT as HTTP-only cookie
+    // Set JWT as HTTP-only cookie with 30-day expiration for persistent login
     const response = NextResponse.json(
       { 
-        message: "Registration successful",
+        message: "Registration successful. Your account is pending approval by an administrator.",
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
           role: user.role
         },
-        token 
+        package: userPackage
       }, 
       { status: 201 }
     )
@@ -111,7 +133,7 @@ export async function POST(request: Request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 30, // 30 days for persistent login
     })
     
     return response

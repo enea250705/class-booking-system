@@ -71,9 +71,22 @@ export const bookingsApi = {
       body: JSON.stringify(bookingData),
     }),
   cancel: (id: string) =>
-    fetchAPI<Booking>(`/bookings/${id}/cancel`, {
-      method: "PUT",
+    fetchAPI<Booking>(`/bookings/${id}`, {
+      method: "DELETE",
     }),
+}
+
+// Waitlist API
+export const waitlistApi = {
+  join: (classId: string) =>
+    fetchAPI<{ position: number, waitlistEntry: any }>("/classes/waitlist", {
+      method: "POST",
+      body: JSON.stringify({ classId }),
+    }),
+  getForClass: (classId: string) => 
+    fetchAPI<{ waitlistCount: number, userWaitlistStatus: { position: number } | null }>(`/classes/waitlist?classId=${classId}`),
+  getAll: () => 
+    fetchAPI<{ classId: string, position: number }[]>("/classes/waitlist"),
 }
 
 // Users API

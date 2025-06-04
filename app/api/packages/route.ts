@@ -14,6 +14,8 @@ export async function GET(request: Request) {
       );
     }
     
+    console.log(`Fetching active package for user: ${user.email}`);
+    
     // Find the user's active package
     const userPackage = await prisma.package.findFirst({
       where: {
@@ -26,7 +28,13 @@ export async function GET(request: Request) {
     });
     
     if (!userPackage) {
-      return NextResponse.json({ package: null });
+      console.log(`No active package found for user: ${user.email}`);
+      return NextResponse.json({ package: null }, {
+        headers: {
+          'Cache-Control': 'no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
     }
     
     // Calculate days remaining
@@ -37,11 +45,18 @@ export async function GET(request: Request) {
       Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     );
     
+    console.log(`Found active package for user ${user.email}: ${userPackage.name}, ${userPackage.classesRemaining}/${userPackage.totalClasses} classes remaining`);
+    
     return NextResponse.json({
       package: {
         ...userPackage,
         daysRemaining,
       },
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
     });
   } catch (error) {
     console.error("Error fetching user package:", error);
@@ -65,14 +80,12 @@ export async function POST(request: Request) {
     }
     
     const { packageType } = await request.json();
+    console.log(`Creating package of type: ${packageType} for user: ${user.email}`);
     
     // Define package types
     const packageTypes: Record<string, { name: string; totalClasses: number; days: number }> = {
       "8": { name: "8 CrossFit Classes / Month", totalClasses: 8, days: 30 },
-      "12": { name: "12 CrossFit Classes / Month", totalClasses: 12, days: 30 },
-      "standard": { name: "8 CrossFit Classes / Month", totalClasses: 8, days: 30 },
-      "premium": { name: "12 CrossFit Classes / Month", totalClasses: 12, days: 30 },
-      "unlimited": { name: "Unlimited CrossFit Classes / Month", totalClasses: 999, days: 30 },
+      "12": { name: "12 CrossFit Classes / Month", totalClasses: 12, days: 30 }
     };
     
     if (!packageType || !(packageType in packageTypes)) {
@@ -81,6 +94,17 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    
+    // First, deactivate any existing active packages for this user
+    await prisma.package.updateMany({
+      where: {
+        userId: user.id,
+        active: true,
+      },
+      data: {
+        active: false,
+      },
+    });
     
     const packageDetails = packageTypes[packageType];
     
@@ -105,11 +129,29 @@ export async function POST(request: Request) {
     // Calculate days remaining
     const daysRemaining = packageDetails.days;
     
+    console.log(`Successfully created package ${newPackage.id} for user ${user.email}`);
+    
+    // Verify the package was created correctly
+    const verifyPackage = await prisma.package.findUnique({
+      where: { id: newPackage.id }
+    });
+    
+    if (verifyPackage) {
+      console.log(`Verified new package is active: ${verifyPackage.active}`);
+    } else {
+      console.warn(`WARNING: Could not verify package ${newPackage.id}`);
+    }
+    
     return NextResponse.json({
       package: {
         ...newPackage,
         daysRemaining,
       },
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
     });
   } catch (error) {
     console.error("Error creating package:", error);

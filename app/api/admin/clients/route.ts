@@ -35,6 +35,8 @@ export async function GET(request: Request) {
       },
     });
     
+    console.log(`Found ${clients.length} clients`);
+    
     // Calculate days remaining for active packages
     const now = new Date();
     const clientsWithFormattedPackages = clients.map(client => {
@@ -42,6 +44,8 @@ export async function GET(request: Request) {
       
       if (client.packages && client.packages.length > 0) {
         const activePackage = client.packages[0];
+        console.log(`Client ${client.email} has active package: ${activePackage.name}`);
+        
         const endDate = new Date(activePackage.endDate);
         const daysRemaining = Math.max(
           0,
@@ -52,6 +56,8 @@ export async function GET(request: Request) {
           ...activePackage,
           daysRemaining,
         };
+      } else {
+        console.log(`Client ${client.email} has no active package`);
       }
       
       return {
@@ -62,11 +68,15 @@ export async function GET(request: Request) {
       };
     });
     
-    return NextResponse.json(clientsWithFormattedPackages);
+    return NextResponse.json(clientsWithFormattedPackages, {
+      headers: {
+        'Cache-Control': 'no-store, must-revalidate',
+      }
+    });
   } catch (error) {
     console.error("Error fetching clients:", error);
     return NextResponse.json(
-      { error: "Failed to fetch clients" },
+      { error: "Failed to fetch clients", details: String(error) },
       { status: 500 }
     );
   }

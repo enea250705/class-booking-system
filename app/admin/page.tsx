@@ -1,5 +1,7 @@
 "use client"
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -17,7 +19,12 @@ import {
   Plus,
   AlertTriangle,
   MenuIcon,
-  X
+  X,
+  Mail,
+  Calendar,
+  User,
+  RefreshCw,
+  Trash2
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
@@ -30,6 +37,7 @@ import { useAuth } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 import { LogoutButton } from "@/components/logout-button"
 import { useToast } from "@/components/ui/use-toast"
+import { AdminSidebar, MobileHeader, MobileMenu } from "./components/AdminLayout"
 
 // Define loader component for when content is loading
 const LoadingIndicator = () => (
@@ -41,145 +49,58 @@ const LoadingIndicator = () => (
   </div>
 );
 
-// AdminSidebar component
-function AdminSidebar({ user }: { user: any }) {
-  return (
-    <aside className="fixed top-0 left-0 h-full w-64 bg-black/80 backdrop-blur-lg border-r border-white/10 z-50 hidden lg:flex flex-col">
-      <div className="flex items-center h-16 px-6 border-b border-white/10">
-        <Link href="/" className="flex items-center">
-          <span className="font-montserrat font-bold text-xl tracking-tight text-white">
-            <span className="text-primary">Class</span>Booker
-          </span>
-        </Link>
-      </div>
-      
-      <nav className="flex-1 py-8 px-4">
-        <div className="space-y-1">
-          <Link href="/admin" className="flex items-center rounded-lg px-3 py-2 text-white bg-white/10 transition-colors">
-            <LayoutDashboard className="h-5 w-5 mr-3 text-primary" />
-            <span>Dashboard</span>
-          </Link>
-          
-          <Link href="/admin/classes" className="flex items-center rounded-lg px-3 py-2 text-white/70 hover:text-white hover:bg-white/10 transition-colors">
-            <CalendarDays className="h-5 w-5 mr-3 text-white/50" />
-            <span>CrossFit Classes</span>
-          </Link>
-          
-          <Link href="/admin/clients" className="flex items-center rounded-lg px-3 py-2 text-white/70 hover:text-white hover:bg-white/10 transition-colors">
-            <Users className="h-5 w-5 mr-3 text-white/50" />
-            <span>Clients</span>
-          </Link>
-        </div>
-      </nav>
-      
-      <div className="p-4 border-t border-white/10">
-        <div className="flex items-center mb-4 pb-4 border-b border-white/10">
-          <Avatar className="border-2 border-white/20 h-10 w-10">
-            <AvatarFallback className="bg-primary/30 text-white">{user?.name?.charAt(0) || 'A'}</AvatarFallback>
-          </Avatar>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-white">{user?.name || 'Admin'}</p>
-            <p className="text-xs text-white/60">{user?.email || 'admin@example.com'}</p>
-          </div>
-        </div>
-        <LogoutButton variant="ghost" className="w-full justify-center text-white hover:bg-white/10" />
-      </div>
-    </aside>
-  );
+// Define TypeScript interfaces for our data
+interface ClassItem {
+  id: string;
+  name: string;
+  day: string;
+  date: string;
+  time: string;
+  capacity: number;
+  currentBookings: number;
+  enabled: boolean;
 }
 
-// MobileHeader component
-function MobileHeader({ user, setIsMobileMenuOpen }: { user: any, setIsMobileMenuOpen: (open: boolean) => void }) {
-  return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/80 backdrop-blur-md lg:hidden">
-      <div className="container flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center">
-          <span className="font-montserrat font-bold text-xl text-white">
-            <span className="text-primary">Class</span>Booker
-          </span>
-        </Link>
-        <div className="flex items-center gap-4">
-          <Badge variant="outline" className="bg-primary/20 border-primary/30 text-white">
-            Admin
-          </Badge>
-          <Avatar className="border-2 border-white/20 h-9 w-9">
-            <AvatarFallback className="bg-primary/30 text-white">{user?.name?.charAt(0) || 'A'}</AvatarFallback>
-          </Avatar>
-          <button 
-            onClick={() => setIsMobileMenuOpen(true)} 
-            className="rounded-md p-2 text-white hover:bg-white/10"
-          >
-            <MenuIcon className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-    </header>
-  );
+interface ClientItem {
+  id: string;
+  name: string;
+  email: string;
+  package?: {
+    id: string;
+    name: string;
+    daysRemaining: number;
+    classesRemaining: number;
+    totalClasses: number;
+  };
 }
 
-// MobileMenu component
-function MobileMenu({ isOpen, onClose, user }: { isOpen: boolean, onClose: () => void, user: any }) {
-  if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 z-[100] lg:hidden">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="absolute right-0 top-0 h-full w-3/4 max-w-xs bg-black border-l border-white/10 p-6 shadow-xl animate-in slide-in-from-right">
-        <div className="flex items-center justify-between mb-8">
-          <span className="font-montserrat font-bold text-lg text-white">
-            <span className="text-primary">Class</span>Booker
-          </span>
-          <button onClick={onClose} className="rounded-full p-1 text-white hover:bg-white/10">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        
-        <div className="mb-6 pb-6 border-b border-white/10">
-          <div className="flex items-center">
-            <Avatar className="border-2 border-white/20 h-12 w-12">
-              <AvatarFallback className="bg-primary/30 text-white">{user?.name?.charAt(0) || 'A'}</AvatarFallback>
-            </Avatar>
-            <div className="ml-3">
-              <p className="font-medium text-white">{user?.name || 'Admin'}</p>
-              <p className="text-sm text-white/60">{user?.email || 'admin@example.com'}</p>
-            </div>
-          </div>
-        </div>
-        
-        <nav className="space-y-6">
-          <Link href="/admin" className="flex items-center py-2 text-white" onClick={onClose}>
-            <LayoutDashboard className="h-5 w-5 mr-3 text-primary" />
-            <span>Dashboard</span>
-          </Link>
-          
-          <Link href="/admin/classes" className="flex items-center py-2 text-white/80 hover:text-white" onClick={onClose}>
-            <CalendarDays className="h-5 w-5 mr-3 text-white/50" />
-            <span>CrossFit Classes</span>
-          </Link>
-          
-          <Link href="/admin/clients" className="flex items-center py-2 text-white/80 hover:text-white" onClick={onClose}>
-            <Users className="h-5 w-5 mr-3 text-white/50" />
-            <span>Clients</span>
-          </Link>
-        </nav>
-        
-        <div className="absolute bottom-8 left-0 w-full px-6">
-          <LogoutButton variant="ghost" className="w-full justify-center text-white hover:bg-white/10" />
-        </div>
-      </div>
-    </div>
-  );
+interface PendingUser {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
 }
 
 export default function AdminDashboardPage() {
-  const [classes, setClasses] = useState([])
-  const [clients, setClients] = useState([])
+  const [classes, setClasses] = useState<ClassItem[]>([])
+  const [clients, setClients] = useState<ClientItem[]>([])
+  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([])
+  const [viewMode, setViewMode] = useState<'day' | 'week'>('week') // Default to week view
+  const [scheduleStatus, setScheduleStatus] = useState<{
+    isLoading: boolean;
+    classCount: number;
+    message: string;
+  }>({
+    isLoading: false,
+    classCount: 0,
+    message: ""
+  });
   const [newClass, setNewClass] = useState({
     name: "",
     day: "",
     time: "",
     date: "",
-    capacity: 15,
+    capacity: "5",
     timeHour: "7",
     timeMinute: "00",
     timePeriod: "AM"
@@ -188,6 +109,7 @@ export default function AdminDashboardPage() {
   const [isCreatingClass, setIsCreatingClass] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isDeletingPastClasses, setIsDeletingPastClasses] = useState(false)
   const { user, logout } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
@@ -199,26 +121,42 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (user === null) {
       router.push("/login");
-    } else if (user && user.role !== "admin") {
+    } else if (user.role !== "admin") {
       router.push("/dashboard");
-    } else if (user && user.role === "admin") {
-      // Load data
-      fetchClasses();
-      fetchClients();
+    } else {
+      // Fetch data for the dashboard once we know user is an admin
+      Promise.all([
+        fetchClasses(),
+        fetchClients(),
+        fetchPendingUsers(),
+        checkScheduleStatus()
+      ]).then(() => {
+        setIsLoading(false);
+      }).catch(error => {
+        console.error("Error fetching dashboard data:", error);
+        setIsLoading(false);
+      });
     }
-  }, [user, router])
+  }, [user, router]);
 
   // Fetch classes
   const fetchClasses = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/classes');
+      // Add timestamp to force bypass cache
+      const response = await fetch('/api/classes?t=' + new Date().getTime(), {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch classes');
       }
       
       const data = await response.json();
+      console.log('Fetched classes:', data); // Log classes for debugging
       setClasses(data);
 
       toast({
@@ -258,6 +196,28 @@ export default function AdminDashboardPage() {
         title: "Error loading clients",
         description: error.message || "Please try again later",
         variant: "destructive"
+      });
+    }
+  };
+
+  // Fetch pending users who need approval
+  const fetchPendingUsers = async () => {
+    try {
+      const response = await fetch('/api/admin/pending-users');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch pending users: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Fetched pending users:", data);
+      setPendingUsers(data);
+    } catch (error) {
+      console.error("Error fetching pending users:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load pending users",
+        variant: "destructive",
       });
     }
   };
@@ -339,6 +299,13 @@ export default function AdminDashboardPage() {
       setIsCreatingClass(true);
       setErrorMessage("");
       
+      // Validate inputs
+      if (!newClass.name || !newClass.date) {
+        setErrorMessage("Please fill in all required fields");
+        setIsCreatingClass(false);
+        return;
+      }
+      
       // Format the day of week from the date
       const dateObj = new Date(newClass.date);
       const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -347,33 +314,47 @@ export default function AdminDashboardPage() {
       // Format time properly
       const formattedTime = `${newClass.timeHour}:${newClass.timeMinute} ${newClass.timePeriod}`;
       
+      console.log("Creating class with data:", {
+        name: newClass.name,
+        day,
+        time: formattedTime,
+        date: newClass.date,
+        capacity: parseInt(newClass.capacity, 10)
+      });
+      
+      // Get auth token from cookie or localStorage
+      const authToken = document.cookie.split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1] || localStorage.getItem('auth_token');
+      
       const response = await fetch('/api/classes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify({
           name: newClass.name,
           day: day,
           time: formattedTime,
           date: newClass.date,
-          capacity: parseInt(newClass.capacity) || 15
+          capacity: parseInt(newClass.capacity, 10)
         }),
       });
       
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to create class');
+        throw new Error(responseData.error || 'Failed to create class');
       }
+      
+      console.log("New class created:", responseData);
       
       toast({
         title: "Class Created",
         description: "The new class has been created successfully",
         variant: "success"
       });
-      
-      // Refresh classes list
-      fetchClasses();
 
     // Reset form
     setNewClass({
@@ -381,11 +362,17 @@ export default function AdminDashboardPage() {
       day: "",
       time: "",
       date: "",
-        capacity: 15,
+        capacity: "5",
         timeHour: "7",
         timeMinute: "00",
         timePeriod: "AM"
       });
+      
+      // Wait a moment then refresh classes list to include the new class
+      setTimeout(() => {
+        fetchClasses();
+      }, 500);
+      
     } catch (error: any) {
       console.error('Error creating class:', error);
       setErrorMessage(error.message);
@@ -419,25 +406,452 @@ export default function AdminDashboardPage() {
         throw new Error(errorData.error || 'Failed to purchase package');
       }
       
+      const data = await response.json();
+      console.log('Package purchased:', data);
+      
       toast({
-        title: "Package Updated",
-        description: "The membership package has been updated successfully", 
+        title: "Package Purchased",
+        description: "Package has been purchased successfully",
         variant: "success"
       });
-      
-      // Refresh data after purchase
-      fetchClients();
     } catch (error: any) {
       console.error('Error purchasing package:', error);
       setErrorMessage(error.message || 'An error occurred');
       
       toast({
-        title: "Error updating package",
+        title: "Error purchasing package",
         description: error.message || "Please try again later",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAssignPackage = async (clientId: string, packageType: string) => {
+    try {
+      toast({
+        title: "Assigning Package",
+        description: "Please wait...",
+        variant: "default"
+      });
+      
+      const response = await fetch(`/api/admin/clients/${clientId}/assign-package`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ packageType }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to assign package');
+      }
+      
+      const data = await response.json();
+      console.log('Package assigned:', data);
+      
+      toast({
+        title: "Package Assigned",
+        description: data.message || "Package has been assigned successfully",
+        variant: "success"
+      });
+      
+      // Refresh clients list to show the new package
+      fetchClients();
+    } catch (error: any) {
+      console.error('Error assigning package:', error);
+      
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign package",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle approving a user
+  const handleApproveUser = async (userId: string) => {
+    try {
+      const response = await fetch('/api/admin/pending-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to approve user: ${response.status}`);
+      }
+      
+      // Remove the approved user from the list
+      setPendingUsers(pendingUsers.filter(user => user.id !== userId));
+      
+      toast({
+        title: "Success",
+        description: "User has been approved successfully",
+      });
+    } catch (error) {
+      console.error("Error approving user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Check the status of the year-long schedule
+  const checkScheduleStatus = async () => {
+    try {
+      setScheduleStatus(prev => ({ ...prev, isLoading: true }));
+      
+      // Count total classes
+      const response = await fetch('/api/classes?count=true');
+      
+      if (!response.ok) {
+        throw new Error('Failed to check schedule status');
+      }
+      
+      const data = await response.json();
+      
+      // Calculate approximate number of classes in a year schedule
+      // ~17 classes per week × 5 days × 52 weeks = ~4420 classes
+      const approximateYearlyClasses = 17 * 5 * 52;
+      const hasYearSchedule = data.count > approximateYearlyClasses * 0.8; // 80% of expected
+      
+      setScheduleStatus({
+        isLoading: false,
+        classCount: data.count,
+        message: hasYearSchedule 
+          ? "Year-long schedule is already generated" 
+          : "Year-long schedule not detected"
+      });
+      
+    } catch (error: any) {
+      console.error('Error checking schedule status:', error);
+      setScheduleStatus({
+        isLoading: false,
+        classCount: 0,
+        message: "Error checking schedule status"
+      });
+    }
+  };
+
+  // Generate the year-long schedule
+  const generateYearSchedule = async () => {
+    try {
+      setScheduleStatus(prev => ({ ...prev, isLoading: true, message: "Generating schedule..." }));
+      
+      const response = await fetch('/api/admin/classes/generate-default-schedule', {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to generate schedule');
+      }
+      
+      const data = await response.json();
+      
+      toast({
+        title: "Schedule Generated",
+        description: `Successfully created ${data.totalClassesCreated} classes for a year`,
+      });
+      
+      setScheduleStatus({
+        isLoading: false,
+        classCount: data.totalClassesCreated,
+        message: "Year-long schedule has been generated"
+      });
+      
+      // Refresh classes
+      fetchClasses();
+      
+    } catch (error: any) {
+      console.error('Error generating schedule:', error);
+      
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate schedule",
+        variant: "destructive"
+      });
+      
+      setScheduleStatus(prev => ({ 
+        ...prev, 
+        isLoading: false, 
+        message: `Error: ${error.message}` 
+      }));
+    }
+  };
+
+  // Reset all classes
+  const resetAllClasses = async () => {
+    if (!window.confirm("Are you sure you want to delete ALL classes? This cannot be undone!")) {
+      return;
+    }
+    
+    try {
+      setScheduleStatus(prev => ({ ...prev, isLoading: true, message: "Deleting all classes..." }));
+      
+      const response = await fetch('/api/admin/classes/clear-all', {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to clear classes');
+      }
+      
+      const data = await response.json();
+      
+      toast({
+        title: "Classes Cleared",
+        description: `Successfully deleted ${data.deleted} classes`,
+      });
+      
+      setScheduleStatus({
+        isLoading: false,
+        classCount: 0,
+        message: "All classes have been deleted"
+      });
+      
+      // Refresh classes
+      fetchClasses();
+      
+    } catch (error: any) {
+      console.error('Error clearing classes:', error);
+      
+      toast({
+        title: "Error",
+        description: error.message || "Failed to clear classes",
+        variant: "destructive"
+      });
+      
+      setScheduleStatus(prev => ({ 
+        ...prev, 
+        isLoading: false, 
+        message: `Error: ${error.message}` 
+      }));
+    }
+  };
+
+  // Handle deleting past classes
+  const handleDeletePastClasses = async () => {
+    try {
+      setIsDeletingPastClasses(true);
+      
+      const response = await fetch('/api/admin/classes/delete-past', {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete past classes');
+      }
+      
+      const data = await response.json();
+      
+      toast({
+        title: "Success",
+        description: "Past classes have been deleted successfully",
+      });
+      
+      // Refresh classes and status
+      fetchClasses();
+      checkScheduleStatus();
+    } catch (error: any) {
+      console.error('Error deleting past classes:', error);
+      
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete past classes",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeletingPastClasses(false);
+    }
+  };
+
+  // Group classes by week for the week view
+  const groupClassesByWeek = () => {
+    // Sort classes by date
+    const sortedClasses = [...classes].sort((a, b) => {
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+    
+    // Group classes by week
+    const weeks: {
+      weekNumber: number;
+      startDate: string;
+      endDate: string;
+      classCount: number;
+      enabledCount: number;
+      dayGroups: {
+        day: string;
+        date: string;
+        classes: ClassItem[];
+      }[];
+    }[] = [];
+    
+    if (sortedClasses.length === 0) return weeks;
+    
+    // Group by week
+    sortedClasses.forEach(cls => {
+      const classDate = new Date(cls.date);
+      
+      // Get the week number (Monday as first day of week)
+      const dayOfWeek = classDate.getDay(); // 0 is Sunday, 1 is Monday, etc.
+      const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to Monday = 0, Sunday = 6
+      
+      // Calculate the Monday date for this week
+      const mondayDate = new Date(classDate);
+      mondayDate.setDate(classDate.getDate() - mondayOffset);
+      
+      // Set time to midnight for consistent comparison
+      mondayDate.setHours(0, 0, 0, 0);
+      
+      // Calculate week number since first Monday in dataset
+      const firstClass = new Date(sortedClasses[0].date);
+      const firstClassMondayOffset = firstClass.getDay() === 0 ? 6 : firstClass.getDay() - 1;
+      const firstMonday = new Date(firstClass);
+      firstMonday.setDate(firstClass.getDate() - firstClassMondayOffset);
+      firstMonday.setHours(0, 0, 0, 0);
+      
+      const weeksSinceStart = Math.floor((mondayDate.getTime() - firstMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      
+      // Find or create week group
+      let weekGroup = weeks.find(w => w.weekNumber === weeksSinceStart);
+      
+      if (!weekGroup) {
+        // Calculate Friday date (end of week for display)
+        const fridayDate = new Date(mondayDate);
+        fridayDate.setDate(mondayDate.getDate() + 4); // Monday + 4 days = Friday
+        
+        weekGroup = {
+          weekNumber: weeksSinceStart,
+          startDate: mondayDate.toISOString(),
+          endDate: fridayDate.toISOString(),
+          classCount: 0,
+          enabledCount: 0,
+          dayGroups: []
+        };
+        weeks.push(weekGroup);
+      }
+      
+      // Update counts
+      weekGroup.classCount++;
+      if (cls.enabled) {
+        weekGroup.enabledCount++;
+      }
+      
+      // Find or create day group
+      let dayGroup = weekGroup.dayGroups.find(d => d.day === cls.day);
+      
+      if (!dayGroup) {
+        dayGroup = {
+          day: cls.day,
+          date: classDate.toISOString(),
+          classes: []
+        };
+        weekGroup.dayGroups.push(dayGroup);
+      }
+      
+      // Add class to day group
+      dayGroup.classes.push(cls);
+    });
+    
+    // Sort each day's classes by time
+    weeks.forEach(week => {
+      week.dayGroups.sort((a, b) => {
+        const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+        return days.indexOf(a.day) - days.indexOf(b.day);
+      });
+      
+      week.dayGroups.forEach(day => {
+        day.classes.sort((a, b) => {
+          // Convert time strings to comparable 24-hour format
+          const getTimeValue = (timeStr: string) => {
+            const [time, period] = timeStr.split(' ');
+            let [hours, minutes] = time.split(':').map(Number);
+            
+            // Convert to 24-hour format
+            if (period === 'PM' && hours < 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            
+            return hours * 60 + minutes;
+          };
+          
+          return getTimeValue(a.time) - getTimeValue(b.time);
+        });
+      });
+    });
+    
+    return weeks;
+  };
+
+  // Handle toggling all classes in a week
+  const handleToggleWeek = async (weekNumber: number, setEnabled: boolean) => {
+    try {
+      // Find all classes for this week
+      const weeks = groupClassesByWeek();
+      const weekGroup = weeks.find(w => w.weekNumber === weekNumber);
+      
+      if (!weekGroup) return;
+      
+      // Get all class IDs from this week
+      const classIds: string[] = [];
+      weekGroup.dayGroups.forEach(day => {
+        day.classes.forEach(cls => {
+          classIds.push(cls.id);
+        });
+      });
+      
+      toast({
+        title: `Updating classes`,
+        description: `Setting ${classIds.length} classes to ${setEnabled ? 'enabled' : 'disabled'}...`,
+        variant: "default"
+      });
+      
+      // Use the batch toggle endpoint to update all classes at once
+      const response = await fetch('/api/classes/batch-toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          classIds, 
+          enabled: setEnabled 
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update classes');
+      }
+      
+      const result = await response.json();
+      
+      // Update local state
+      setClasses(classes.map(cls => 
+        classIds.includes(cls.id) ? { ...cls, enabled: setEnabled } : cls
+      ));
+      
+      toast({
+        title: `Classes ${setEnabled ? 'Enabled' : 'Disabled'}`,
+        description: `Successfully updated ${result.updatedCount} of ${classIds.length} classes`,
+        variant: "success"
+      });
+    } catch (error: any) {
+      console.error('Error toggling week classes:', error);
+      
+      toast({
+        title: "Error updating classes",
+        description: error.message || "Please try again later",
+        variant: "destructive"
+      });
     }
   };
 
@@ -478,16 +892,16 @@ export default function AdminDashboardPage() {
             className="object-cover object-center"
           />
           <div className="absolute inset-0 bg-black/70 backdrop-blur-[1px]"></div>
-        </div>
+          </div>
         
         {/* Desktop sidebar */}
-        <AdminSidebar user={user} />
+        <AdminSidebar user={user} pendingUsers={pendingUsers} />
         
         {/* Mobile header */}
         <MobileHeader user={user} setIsMobileMenuOpen={setIsMobileMenuOpen} />
         
         {/* Mobile menu */}
-        <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} user={user} />
+        <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} user={user} pendingUsers={pendingUsers} />
 
         {/* Main content */}
         <main className="flex-1 container max-w-6xl mx-auto lg:pl-64 py-8 sm:py-12 px-4 relative z-10">
@@ -503,21 +917,89 @@ export default function AdminDashboardPage() {
             <div className="space-y-8">
               <Tabs defaultValue="classes" className="space-y-6">
                 <div className="overflow-x-auto pb-2">
-                  <TabsList className="bg-black/50 p-1 rounded-lg border border-white/10 mx-auto flex justify-center w-full max-w-md">
-                    <TabsTrigger value="classes" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-md flex-1 min-w-[100px]">
-                      CrossFit Classes
+                  <TabsList className="bg-black/50 p-1 rounded-lg border border-white/10 mx-auto flex justify-center w-full max-w-full sm:max-w-2xl overflow-x-auto">
+                    <TabsTrigger value="classes" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-md flex-1 min-w-[70px] text-xs sm:text-sm whitespace-nowrap">
+                      Classes
                     </TabsTrigger>
-                    <TabsTrigger value="clients" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-md flex-1 min-w-[100px]">
-                      Manage Clients
+                    <TabsTrigger value="add-class" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-md flex-1 min-w-[70px] text-xs sm:text-sm whitespace-nowrap">
+                      Add Class
                     </TabsTrigger>
-                    <TabsTrigger value="add" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-md flex-1 min-w-[100px]">
-                      Add CrossFit Class
+                    <TabsTrigger value="clients" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-md flex-1 min-w-[70px] text-xs sm:text-sm whitespace-nowrap">
+                      Clients
                     </TabsTrigger>
-            </TabsList>
+                    <TabsTrigger value="schedule" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-md flex-1 min-w-[70px] text-xs sm:text-sm whitespace-nowrap">
+                      Schedule
+                    </TabsTrigger>
+                  </TabsList>
                 </div>
 
                 <TabsContent value="classes" className="space-y-6 animate-in">
                   <h2 className="text-2xl font-semibold tracking-tight text-white text-center">CrossFit Class Schedule</h2>
+                  
+                  <div className="flex flex-wrap justify-center gap-2 mb-4">
+                    <Button
+                      onClick={fetchClasses}
+                      variant="outline"
+                      className="bg-transparent border border-white/20 text-white hover:bg-white/10 text-xs sm:text-sm"
+                    >
+                      Refresh Classes
+                    </Button>
+                    <div className="flex items-center bg-black/40 rounded-md border border-white/20 px-3 py-1.5 gap-2">
+                      <span className="text-xs text-white/70">View:</span>
+                      <Button
+                        variant={viewMode === 'day' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('day')}
+                        className="h-7 text-xs bg-transparent hover:bg-white/10 text-white data-[state=active]:bg-white data-[state=active]:text-black"
+                      >
+                        Day
+                      </Button>
+                      <Button
+                        variant={viewMode === 'week' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('week')}
+                        className="h-7 text-xs bg-transparent hover:bg-white/10 text-white data-[state=active]:bg-white data-[state=active]:text-black"
+                      >
+                        Week
+            </Button>
+          </div>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const authToken = document.cookie.split('; ')
+                            .find(row => row.startsWith('auth_token='))
+                            ?.split('=')[1] || localStorage.getItem('auth_token');
+                            
+                          const response = await fetch('/api/debug?t=' + new Date().getTime(), {
+                            headers: {
+                              'Authorization': `Bearer ${authToken}`,
+                              'Cache-Control': 'no-cache'
+                            }
+                          });
+                          
+                          if (!response.ok) {
+                            throw new Error('Failed to fetch debug data');
+                          }
+                          
+                          const data = await response.json();
+                          console.log('Debug data:', data);
+                          
+                          toast({
+                            title: "Debug Data",
+                            description: `Found ${data.stats.totalClasses} classes in database`,
+                            variant: "default"
+                          });
+                        } catch (error) {
+                          console.error('Error fetching debug data:', error);
+                        }
+                      }}
+                      variant="outline"
+                      className="bg-transparent border border-white/20 text-white hover:bg-white/10 text-xs sm:text-sm"
+                    >
+                      Debug Database
+                    </Button>
+        </div>
+                  
                   {isLoading ? (
                     <LoadingIndicator />
                   ) : (
@@ -526,24 +1008,24 @@ export default function AdminDashboardPage() {
                         <Card className="border-white/10 bg-black/40 backdrop-blur-md shadow-xl overflow-hidden">
                           <CardContent className="p-10 flex flex-col items-center justify-center text-center">
                             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                              <CalendarDays className="h-8 w-8 text-white/60" />
-                            </div>
+                             <CalendarDays className="h-8 w-8 text-white/60" />
+                           </div>
                             <h3 className="font-medium text-white text-lg">No CrossFit classes found</h3>
                             <p className="text-white/70 mt-2 max-w-xs">You haven't created any CrossFit classes yet. Use the Add New Class tab to get started.</p>
                             <Button 
                               onClick={() => {
-                                const element = document.querySelector('[data-state="inactive"][value="add"]') as HTMLElement;
-                                if (element) element.click();
+                                generateYearSchedule();
                               }}
                               className="mt-6 bg-white/20 text-white hover:bg-white/30 border border-white/10"
                             >
-                              Create New CrossFit Class
+                              Generate Year Schedule
                             </Button>
                           </CardContent>
                         </Card>
-                      ) : (
+                      ) : viewMode === 'day' ? (
+                        // Day view - individual classes
                         classes.map((cls) => (
-                          <Card key={cls.id} className="bg-black/40 backdrop-blur-md border-white/10 shadow-lg hover:shadow-xl transition-all group overflow-hidden">
+                          <Card key={cls.id} className="bg-black/40 backdrop-blur-md border-white/10 shadow-lg hover:shadow-xl transition-all group overflow-hidden cursor-pointer" onClick={() => router.push(`/admin/classes/${cls.id}`)}>
                             <CardContent className="p-6 relative">
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div className="space-y-2">
@@ -551,7 +1033,7 @@ export default function AdminDashboardPage() {
                                   <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-sm text-white/70">
                                     <div className="flex items-center">
                                       <CalendarDays className="mr-1.5 h-4 w-4" />
-                                      <span>{new Date(cls.date).toLocaleDateString()}</span>
+                                      <span>{cls.day} - {new Date(cls.date).toLocaleDateString()}</span>
                                     </div>
                                     <div className="flex items-center">
                                       <Clock className="mr-1.5 h-4 w-4" />
@@ -560,7 +1042,7 @@ export default function AdminDashboardPage() {
                         </div>
                                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/60">
                                     <span>Bookings: {cls.currentBookings} / {cls.capacity}</span>
-                                    <span>Payment: Cash only</span>
+                                    <span>ID: {cls.id.substring(0, 8)}...</span>
                                   </div>
                                 </div>
                                 <div className="flex sm:flex-col items-center sm:items-end gap-3">
@@ -577,13 +1059,277 @@ export default function AdminDashboardPage() {
                     </CardContent>
                   </Card>
                         ))
-                      )}
+                      ) : (
+                        // Week view - grouped by week
+                        groupClassesByWeek().map((weekGroup, index) => (
+                          <Card key={`week-${index}`} className="bg-black/40 backdrop-blur-md border-white/10 shadow-lg hover:shadow-xl transition-all group overflow-hidden">
+                            <CardHeader className="border-b border-white/10 bg-black/30 py-3">
+          <div className="flex items-center justify-between">
+                                <CardTitle className="text-lg text-white">
+                                  Week of {new Date(weekGroup.startDate).toLocaleDateString()} - {new Date(weekGroup.endDate).toLocaleDateString()}
+                                </CardTitle>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm text-white/70">{weekGroup.classCount} classes</span>
+                                  <Switch 
+                                    checked={weekGroup.enabledCount > 0} 
+                                    onCheckedChange={() => handleToggleWeek(weekGroup.weekNumber, weekGroup.enabledCount < weekGroup.classCount)} 
+                                    className="data-[state=checked]:bg-primary"
+                                  />
+          </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                              <div className="grid grid-cols-1 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-white/10">
+                                {weekGroup.dayGroups.map((dayGroup) => (
+                                  <div key={dayGroup.date} className="p-4 bg-gradient-to-b from-transparent to-black/20">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <h3 className="font-medium text-white">{dayGroup.day}</h3>
+                                      <span className="text-xs text-white/60">{new Date(dayGroup.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                      {dayGroup.classes.map((cls) => (
+                                        <div 
+                                          key={cls.id} 
+                                          className={`flex items-center justify-between bg-black/30 rounded p-2 text-sm ${cls.enabled ? 'hover:bg-primary/20 cursor-pointer' : 'opacity-70'}`}
+                                          onClick={() => cls.enabled && router.push(`/admin/classes/${cls.id}`)}
+                                        >
+                                          <span className="text-white">{cls.time}</span>
+                                          <Badge variant={cls.enabled ? "outline" : "secondary"} className={cls.enabled ? "bg-primary/20 text-white border-primary/30 text-xs" : "bg-muted/20 text-white/70 border-white/10 text-xs"}>
+                                            {cls.currentBookings}/{cls.capacity}
+                                          </Badge>
+                                        </div>
+                ))}
               </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </div>
                   )}
             </TabsContent>
 
+                <TabsContent value="add-class" className="space-y-6 animate-in">
+                  <h2 className="text-2xl font-semibold tracking-tight text-white text-center">Add New Class</h2>
+                  
+                  <Card className="border-white/10 bg-black/40 backdrop-blur-md shadow-xl overflow-hidden">
+                    <CardHeader className="border-b border-white/10 bg-black/30">
+                      <CardTitle className="text-xl text-white">Class Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <form onSubmit={handleAddClass}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="name" className="text-white">Class Name</Label>
+                            <Input
+                              id="name"
+                              value={newClass.name}
+                              onChange={(e) => setNewClass({ ...newClass, name: e.target.value })}
+                              placeholder="e.g., CrossFit WOD"
+                              className="bg-black/20 border-white/20 text-white placeholder:text-white/50"
+                              required
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="date" className="text-white">Date</Label>
+                            <Input
+                              id="date"
+                              type="date"
+                              value={newClass.date}
+                              onChange={(e) => {
+                                const selectedDate = e.target.value;
+                                if (selectedDate) {
+                                  const dateObj = new Date(selectedDate);
+                                  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                                  const dayName = days[dateObj.getDay()];
+                                  setNewClass({ 
+                                    ...newClass, 
+                                    date: selectedDate,
+                                    day: dayName
+                                  });
+                                } else {
+                                  setNewClass({ ...newClass, date: selectedDate });
+                                }
+                              }}
+                              className="bg-black/20 border-white/20 text-white"
+                              required
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="day" className="text-white">Day (Auto-filled)</Label>
+                            <Select
+                              value={newClass.day}
+                              onValueChange={(value) => setNewClass({ ...newClass, day: value })}
+                              disabled={!!newClass.date}
+                            >
+                              <SelectTrigger className="bg-black/20 border-white/20 text-white">
+                                <SelectValue placeholder={newClass.day || "Select a date first"} />
+                              </SelectTrigger>
+                              <SelectContent className="bg-black border-white/20">
+                                <SelectItem value="Monday">Monday</SelectItem>
+                                <SelectItem value="Tuesday">Tuesday</SelectItem>
+                                <SelectItem value="Wednesday">Wednesday</SelectItem>
+                                <SelectItem value="Thursday">Thursday</SelectItem>
+                                <SelectItem value="Friday">Friday</SelectItem>
+                                <SelectItem value="Saturday">Saturday</SelectItem>
+                                <SelectItem value="Sunday">Sunday</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="capacity" className="text-white">Capacity</Label>
+                            <Input
+                              id="capacity"
+                              type="number"
+                              min="1"
+                              max="20"
+                              value={newClass.capacity}
+                              onChange={(e) => setNewClass({ ...newClass, capacity: e.target.value })}
+                              className="bg-black/20 border-white/20 text-white"
+                              required
+                            />
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <Label htmlFor="timeHour" className="text-white">Hour</Label>
+                              <Select
+                                value={newClass.timeHour}
+                                onValueChange={(value) => setNewClass({ ...newClass, timeHour: value })}
+                              >
+                                <SelectTrigger className="bg-black/20 border-white/20 text-white">
+                                  <SelectValue placeholder="Hour" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-black border-white/20">
+                                  {Array.from({ length: 12 }, (_, i) => i + 1).map(hour => (
+                                    <SelectItem key={hour} value={hour.toString()}>{hour}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex-1">
+                              <Label htmlFor="timeMinute" className="text-white">Minute</Label>
+                              <Select
+                                value={newClass.timeMinute}
+                                onValueChange={(value) => setNewClass({ ...newClass, timeMinute: value })}
+                              >
+                                <SelectTrigger className="bg-black/20 border-white/20 text-white">
+                                  <SelectValue placeholder="Min" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-black border-white/20">
+                                  <SelectItem value="00">00</SelectItem>
+                                  <SelectItem value="15">15</SelectItem>
+                                  <SelectItem value="30">30</SelectItem>
+                                  <SelectItem value="45">45</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex-1">
+                              <Label htmlFor="timePeriod" className="text-white">Period</Label>
+                              <Select
+                                value={newClass.timePeriod}
+                                onValueChange={(value) => setNewClass({ ...newClass, timePeriod: value })}
+                              >
+                                <SelectTrigger className="bg-black/20 border-white/20 text-white">
+                                  <SelectValue placeholder="AM/PM" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-black border-white/20">
+                                  <SelectItem value="AM">AM</SelectItem>
+                                  <SelectItem value="PM">PM</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {errorMessage && (
+                          <Alert className="mt-4 bg-red-900/20 border-red-500/30">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertTitle className="text-red-300">Error</AlertTitle>
+                            <AlertDescription className="text-red-200">
+                              {errorMessage}
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                        
+                        <Button
+                          type="submit"
+                          className="w-full mt-6 bg-primary text-black hover:bg-primary/90 font-medium"
+                          disabled={isCreatingClass}
+                        >
+                          {isCreatingClass ? (
+                            <span className="flex items-center gap-2">
+                              <div className="h-4 w-4 rounded-full border-2 border-black/20 border-r-transparent animate-spin"></div>
+                              Creating Class...
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-2">
+                              <Plus className="h-4 w-4" />
+                              Add Class
+                            </span>
+                          )}
+                        </Button>
+                      </form>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
                 <TabsContent value="clients" className="space-y-6 animate-in">
                   <h2 className="text-2xl font-semibold tracking-tight text-white text-center">CrossFit Client Management</h2>
+                  
+                  <div className="flex flex-wrap justify-center gap-2 mb-4">
+                    <Button
+                      onClick={fetchClients}
+                      variant="outline"
+                      className="bg-transparent border border-white/20 text-white hover:bg-white/10 text-xs sm:text-sm"
+                    >
+                      Refresh Clients
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const response = await fetch('/api/debug/admin-clients?t=' + new Date().getTime(), {
+                            headers: {
+                              'Cache-Control': 'no-cache'
+                            }
+                          });
+                          
+                          if (!response.ok) {
+                            throw new Error('Failed to fetch debug data');
+                          }
+                          
+                          const data = await response.json();
+                          console.log('Client debug data:', data);
+                          
+                          toast({
+                            title: "Debug Client Data",
+                            description: `Found ${data.clientCount} clients with packages`,
+                            variant: "default"
+                          });
+                          
+                          // Refresh clients
+                          fetchClients();
+                        } catch (error) {
+                          console.error('Error fetching client debug data:', error);
+                          toast({
+                            title: "Error",
+                            description: "Failed to fetch client debug data",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                      variant="outline"
+                      className="bg-transparent border border-white/20 text-white hover:bg-white/10 text-xs sm:text-sm"
+                    >
+                      Debug Client Packages
+                    </Button>
+                  </div>
+                  
                   {isLoading ? (
                     <LoadingIndicator />
                   ) : (
@@ -607,7 +1353,7 @@ export default function AdminDashboardPage() {
                                   <div className="flex items-center gap-3">
                                     <Avatar className="border-2 border-white/20 h-10 w-10">
                                       <AvatarFallback className="bg-primary/30 text-white">{client.name?.charAt(0) || 'C'}</AvatarFallback>
-                                    </Avatar>
+            </Avatar>
                                     <div>
                                       <h3 className="font-semibold text-white text-lg">{client.name}</h3>
                                       <p className="text-sm text-white/70">{client.email}</p>
@@ -628,21 +1374,44 @@ export default function AdminDashboardPage() {
                                         <div className="flex items-center justify-between text-xs">
                                           <span className="text-white/70">Classes Remaining</span>
                                           <span className="font-medium text-white">{client.package.classesRemaining} / {client.package.totalClasses}</span>
-                                        </div>
+                          </div>
                                         <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                                           <div 
                                             className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-500 ease-out" 
                                             style={{ width: `${(client.package.classesRemaining / client.package.totalClasses) * 100}%` }}
                                           ></div>
-                                        </div>
-                          </div>
                         </div>
+                                        <div className="text-xs text-white/60 mt-1">
+                                          Package ID: {client.package.id.substring(0, 8)}...
+                                        </div>
+                                      </div>
+                                    </div>
                                   ) : (
                                     <div className="mt-3 bg-amber-900/30 backdrop-blur-md rounded-lg p-3 border border-amber-500/30">
-                                      <Badge variant="outline" className="bg-amber-500/20 text-white border-amber-500/30">
-                                        No Active Package
-                                      </Badge>
-                                    </div>
+                                      <div className="flex items-center justify-between mb-2">
+                                        <Badge variant="outline" className="bg-amber-500/20 text-white border-amber-500/30">
+                                          No Active Package
+                                        </Badge>
+                                      </div>
+                                      <div className="flex space-x-2 mt-2">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleAssignPackage(client.id, "standard")}
+                                          className="text-xs h-8 bg-transparent border border-white/20 text-white hover:bg-primary/20 hover:border-primary/30"
+                                        >
+                                          Assign Standard
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleAssignPackage(client.id, "premium")}
+                                          className="text-xs h-8 bg-transparent border border-white/20 text-white hover:bg-primary/20 hover:border-primary/30"
+                                        >
+                                          Assign Premium
+            </Button>
+          </div>
+        </div>
                                   )}
                                 </div>
                                 
@@ -667,147 +1436,176 @@ export default function AdminDashboardPage() {
                   )}
             </TabsContent>
 
-                <TabsContent value="add" className="animate-in">
+                <TabsContent value="schedule" className="space-y-6 animate-in">
+                  <h2 className="text-2xl font-semibold tracking-tight text-white text-center">Year-Long Schedule Management</h2>
+                  
                   <Card className="border-white/10 bg-black/40 backdrop-blur-md shadow-xl overflow-hidden">
                     <CardHeader className="border-b border-white/10 bg-black/30">
-                      <CardTitle className="text-xl text-white">Add New CrossFit Class</CardTitle>
-                      <CardDescription className="text-white/70">Create a new CrossFit class that clients can book</CardDescription>
+                      <CardTitle className="text-xl text-white">Schedule Status</CardTitle>
+                      <CardDescription className="text-white/70">Manage the year-long class schedule starting from June 2, 2025</CardDescription>
                 </CardHeader>
-                <form onSubmit={handleAddClass}>
-                      <CardContent className="space-y-6 p-6">
-                        <div className="grid gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="name" className="text-sm text-white">Class Name</Label>
-                      <Input
-                        id="name"
-                              placeholder="e.g. Morning CrossFit"
-                        value={newClass.name}
-                        onChange={(e) => setNewClass({ ...newClass, name: e.target.value })}
-                              className="h-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                        required
-                      />
+                    <CardContent className="p-6">
+        <div className="space-y-6">
+                        <div className="bg-black/30 rounded-lg p-4 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div>
+                            <h3 className="font-medium text-white text-lg">Current Status</h3>
+                            <p className="text-white/70 mt-1">
+                              {scheduleStatus.isLoading 
+                                ? "Checking status..." 
+                                : `${scheduleStatus.classCount} total classes found`}
+                            </p>
+                            <p className="text-white/70 mt-1">
+                              {scheduleStatus.message}
+                            </p>
                     </div>
+                          <Button
+                            onClick={checkScheduleStatus}
+                            variant="outline"
+                            size="sm"
+                            className="bg-transparent border border-white/20 text-white hover:bg-white/10"
+                            disabled={scheduleStatus.isLoading}
+                          >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${scheduleStatus.isLoading ? 'animate-spin' : ''}`} />
+                            Refresh Status
+                          </Button>
+                      </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <Card className="bg-black/30 border-white/10">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-base text-white">Generate Year Schedule</CardTitle>
+                              <CardDescription className="text-white/70 text-xs">
+                                Create classes for all weekdays from Jun 2, 2025 to Jun 1, 2026
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent className="text-white/70 text-sm pt-0">
+                              <p>• Monday-Friday classes only</p>
+                              <p>• Morning and evening sessions</p>
+                              <p>• All classes disabled by default</p>
+                            </CardContent>
+                            <CardFooter className="pt-0">
+                              <Button
+                                onClick={generateYearSchedule}
+                                className="w-full bg-white text-black hover:bg-white/90"
+                                disabled={scheduleStatus.isLoading}
+                              >
+                                {scheduleStatus.isLoading && scheduleStatus.message === "Generating schedule..." ? (
+                                  <span className="flex items-center gap-2">
+                                    <div className="h-4 w-4 rounded-full border-2 border-black/20 border-r-transparent animate-spin"></div>
+                                    Generating...
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4" />
+                                    Generate Schedule
+                                  </span>
+                                )}
+                              </Button>
+                            </CardFooter>
+                          </Card>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="date" className="text-sm text-white">Date</Label>
-                      <Input
-                        id="date"
-                        type="date"
-                        value={newClass.date}
-                        onChange={(e) => setNewClass({ ...newClass, date: e.target.value })}
-                                className="h-10 bg-white/10 border-white/20 text-white"
-                                required
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <Label htmlFor="time" className="text-sm text-white">Time</Label>
-                              <div className="flex space-x-2">
-                                <select 
-                                  id="time-hour"
-                                  className="h-10 w-1/3 rounded-md border border-white/20 bg-white/10 text-white px-3 py-2 text-sm"
-                                  value={newClass.timeHour || "7"}
-                                  onChange={(e) => {
-                                    const hour = e.target.value;
-                                    setNewClass({
-                                      ...newClass,
-                                      timeHour: hour,
-                                      time: `${hour}:${newClass.timeMinute} ${newClass.timePeriod}`
-                                    });
-                                  }}
-                                >
-                                  {Array.from({length: 12}, (_, i) => i + 1).map(hour => (
-                                    <option key={hour} value={hour}>{hour}</option>
-                                  ))}
-                                </select>
-                                <span className="flex items-center text-white">:</span>
-                                <select 
-                                  id="time-minute"
-                                  className="h-10 w-1/3 rounded-md border border-white/20 bg-white/10 text-white px-3 py-2 text-sm"
-                                  value={newClass.timeMinute || "00"}
-                                  onChange={(e) => {
-                                    const minute = e.target.value;
-                                    setNewClass({
-                                      ...newClass,
-                                      timeMinute: minute,
-                                      time: `${newClass.timeHour}:${minute} ${newClass.timePeriod}`
-                                    });
-                                  }}
-                                >
-                                  {["00", "15", "30", "45"].map(minute => (
-                                    <option key={minute} value={minute}>{minute}</option>
-                                  ))}
-                                </select>
-                                <select 
-                                  id="time-period"
-                                  className="h-10 w-1/3 rounded-md border border-white/20 bg-white/10 text-white px-3 py-2 text-sm"
-                                  value={newClass.timePeriod || "AM"}
-                                  onChange={(e) => {
-                                    const period = e.target.value;
-                                    setNewClass({
-                                      ...newClass,
-                                      timePeriod: period,
-                                      time: `${newClass.timeHour}:${newClass.timeMinute} ${period}`
-                                    });
-                                  }}
-                                >
-                                  <option value="AM">AM</option>
-                                  <option value="PM">PM</option>
-                                </select>
+                          <Card className="bg-black/30 border-white/10">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-base text-white">Delete Past Classes</CardTitle>
+                              <CardDescription className="text-white/70 text-xs">
+                                Remove all classes older than 7 days
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent className="text-white/70 text-sm pt-0">
+                              <p>• Removes completed classes</p>
+                              <p>• Automatically runs weekly</p>
+                              <p>• Frees up database space</p>
+                            </CardContent>
+                            <CardFooter className="pt-0">
+                              <Button
+                                onClick={handleDeletePastClasses}
+                                className="w-full bg-indigo-800/70 text-white hover:bg-indigo-700/70"
+                                disabled={isDeletingPastClasses}
+                              >
+                                {isDeletingPastClasses ? (
+                                  <span className="flex items-center gap-2">
+                                    <div className="h-4 w-4 rounded-full border-2 border-white/20 border-r-transparent animate-spin"></div>
+                                    Deleting Past Classes...
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-2">
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete Past Classes
+                                  </span>
+                                )}
+                              </Button>
+                            </CardFooter>
+                          </Card>
+                          
+                          <Card className="bg-black/30 border-white/10">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-base text-white">Reset All Classes</CardTitle>
+                              <CardDescription className="text-white/70 text-xs">
+                                Delete all classes from the database
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent className="text-white/70 text-sm pt-0">
+                              <p className="text-amber-400">⚠️ Warning: This will delete ALL classes</p>
+                              <p>• All bookings will be lost</p>
+                              <p>• This action cannot be undone</p>
+                            </CardContent>
+                            <CardFooter className="pt-0">
+                              <Button
+                                onClick={resetAllClasses}
+                                variant="outline"
+                                className="w-full bg-transparent border-red-500/30 text-red-400 hover:bg-red-950/30 hover:text-red-400"
+                                disabled={scheduleStatus.isLoading}
+                              >
+                                {scheduleStatus.isLoading && scheduleStatus.message === "Deleting all classes..." ? (
+                                  <span className="flex items-center gap-2">
+                                    <div className="h-4 w-4 rounded-full border-2 border-current border-r-transparent animate-spin"></div>
+                                    Deleting...
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-2">
+                                    <Trash2 className="h-4 w-4" />
+                                    Reset All Classes
+                                  </span>
+                                )}
+                              </Button>
+                            </CardFooter>
+                          </Card>
+                      </div>
+                        
+                        <div className="bg-black/30 rounded-lg p-4 border border-white/10">
+                          <h3 className="font-medium text-white mb-2">Schedule Details</h3>
+                          <div className="space-y-2 text-sm">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              <div className="p-2 bg-black/40 rounded border border-white/10">
+                                <p className="text-white/60">Monday</p>
+                                <p className="text-white">AM: 8:00, 9:00, 10:00</p>
+                                <p className="text-white">PM: 17:00, 18:00, 19:00, 20:00</p>
+                    </div>
+                              <div className="p-2 bg-black/40 rounded border border-white/10">
+                                <p className="text-white/60">Tuesday</p>
+                                <p className="text-white">AM: 8:00, 9:00</p>
+                                <p className="text-white">PM: 17:00, 18:00, 19:00, 20:00</p>
+                              </div>
+                              <div className="p-2 bg-black/40 rounded border border-white/10">
+                                <p className="text-white/60">Wednesday</p>
+                                <p className="text-white">AM: 8:00, 9:00, 10:00</p>
+                                <p className="text-white">PM: 17:00, 18:00, 19:00, 20:00</p>
+                              </div>
+                              <div className="p-2 bg-black/40 rounded border border-white/10">
+                                <p className="text-white/60">Thursday</p>
+                                <p className="text-white">AM: 8:00, 9:00</p>
+                                <p className="text-white">PM: 17:00, 18:00, 19:00, 20:00</p>
+                              </div>
+                              <div className="p-2 bg-black/40 rounded border border-white/10">
+                                <p className="text-white/60">Friday</p>
+                                <p className="text-white">AM: 8:00, 9:00, 10:00</p>
+                                <p className="text-white">PM: 16:00, 17:00, 18:00</p>
                               </div>
                             </div>
                           </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="capacity" className="text-sm text-white">Capacity</Label>
-                            <Input
-                              id="capacity"
-                              type="number"
-                              min="1"
-                              value={newClass.capacity}
-                              onChange={(e) => setNewClass({ ...newClass, capacity: e.target.value })}
-                              className="h-10 bg-white/10 border-white/20 text-white"
-                        required
-                      />
-                    </div>
-                          
-                          <div className="space-y-2">
-                            <Label className="text-sm text-white">Payment Method</Label>
-                            <div className="p-3 bg-white/10 rounded-md text-sm text-white/70 border border-white/10">
-                              All CrossFit classes require cash payment at the studio.
-                            </div>
-                          </div>
                         </div>
-                        
-                        {errorMessage && (
-                          <Alert className="bg-red-900/70 backdrop-blur-md border border-red-500/30 text-white animate-in">
-                            <AlertTriangle className="h-4 w-4" />
-                            <AlertTitle>Error</AlertTitle>
-                            <AlertDescription>{errorMessage}</AlertDescription>
-                          </Alert>
-                        )}
+                    </div>
                   </CardContent>
-                      <CardFooter className="bg-black/20 border-t border-white/10 p-6">
-                        <Button 
-                          type="submit" 
-                          disabled={isCreatingClass}
-                          className="w-full bg-white text-black hover:bg-white/90 disabled:bg-white/50"
-                        >
-                          {isCreatingClass ? (
-                            <span className="flex items-center gap-2">
-                              <div className="h-4 w-4 rounded-full border-2 border-black/20 border-r-transparent animate-spin"></div>
-                              Creating CrossFit Class...
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-2">
-                              <Plus className="h-4 w-4" />
-                      Add CrossFit Class
-                            </span>
-                          )}
-                    </Button>
-                  </CardFooter>
-                </form>
               </Card>
             </TabsContent>
           </Tabs>
@@ -818,3 +1616,5 @@ export default function AdminDashboardPage() {
     </>
   );
 }
+
+                           

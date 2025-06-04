@@ -16,6 +16,14 @@ export async function GET() {
     path: "/",
   });
   
+  // Clear the backup session cookie
+  response.cookies.set({
+    name: "auth_session",
+    value: "",
+    expires: new Date(0),
+    path: "/",
+  });
+  
   return response;
 }
 

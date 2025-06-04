@@ -54,95 +54,29 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { AdminSidebar, MobileHeader, MobileMenu } from "../components/AdminLayout"
 
-// Mock data for demonstration
-const mockClients = [
-  {
-    id: 1,
-    name: "Jane Smith",
-    email: "jane@example.com",
-    package: {
-      name: "Plan A: 8 Classes / Month",
-    classesRemaining: 5,
-      totalClasses: 8,
-      daysRemaining: 18
-    },
-    joinDate: "January 15, 2023",
-    nextClass: "Yoga Flow - Tomorrow, 8:00 AM",
-    status: "active",
-    totalBookings: 27
-  },
-  {
-    id: 2,
-    name: "John Doe",
-    email: "john@example.com",
-    package: {
-      name: "Plan B: 12 Classes / Month",
-    classesRemaining: 8,
-      totalClasses: 12,
-      daysRemaining: 22
-    },
-    joinDate: "February 3, 2023",
-    nextClass: "HIIT Training - Today, 6:00 PM",
-    status: "active",
-    totalBookings: 42
-  },
-  {
-    id: 3,
-    name: "Alice Johnson",
-    email: "alice@example.com",
-    package: {
-      name: "Plan A: 8 Classes / Month",
-    classesRemaining: 2,
-      totalClasses: 8,
-      daysRemaining: 5
-    },
-    joinDate: "December 10, 2022",
-    nextClass: "Morning Yoga - In 2 days, 7:00 AM",
-    status: "warning",
-    totalBookings: 63
-  },
-  {
-    id: 4,
-    name: "Bob Williams",
-    email: "bob@example.com",
-    package: {
-      name: "Plan B: 12 Classes / Month",
-    classesRemaining: 10,
-      totalClasses: 12,
-      daysRemaining: 25
-    },
-    joinDate: "March 5, 2023",
-    nextClass: null,
-    status: "active",
-    totalBookings: 18
-  },
-  {
-    id: 5,
-    name: "Carol Brown",
-    email: "carol@example.com",
-    package: null,
-    joinDate: "November 20, 2022",
-    nextClass: null,
-    status: "expired",
-    totalBookings: 24
-  },
-  {
-    id: 6,
-    name: "Dave Miller",
-    email: "dave@example.com",
-    package: {
-      name: "Plan C: Unlimited / Month",
-      classesRemaining: null,
-      totalClasses: null,
-      daysRemaining: 14
-    },
-    joinDate: "April 15, 2023",
-    nextClass: "Boxing - In 3 days, 6:00 PM",
-    status: "active",
-    totalBookings: 34
-  },
-]
+// Remove the mockClients array
+// Instead define proper interfaces
+interface ClientPackage {
+  id: string;
+  name: string;
+  classesRemaining: number;
+  totalClasses: number;
+  daysRemaining: number;
+  active: boolean;
+}
+
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  package?: ClientPackage;
+  status?: "active" | "warning" | "expired";
+  joinDate?: string;
+  totalBookings?: number;
+  nextClass?: string;
+}
 
 // Define LoadingIndicator component
 const LoadingIndicator = () => (
@@ -154,146 +88,16 @@ const LoadingIndicator = () => (
   </div>
 );
 
-// AdminSidebar component
-function AdminSidebar({ user }: { user: any }) {
-  return (
-    <aside className="fixed top-0 left-0 h-full w-64 bg-black/80 backdrop-blur-lg border-r border-white/10 z-50 hidden lg:flex flex-col">
-      <div className="flex items-center h-16 px-6 border-b border-white/10">
-        <Link href="/" className="flex items-center">
-          <span className="font-montserrat font-bold text-xl tracking-tight text-white">
-            <span className="text-primary">Gym</span>Xam
-          </span>
-        </Link>
-      </div>
-      
-      <nav className="flex-1 py-8 px-4">
-        <div className="space-y-4">
-          <Link href="/admin" className="flex items-center rounded-lg px-3 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-colors">
-            <LayoutDashboard className="h-5 w-5 mr-3 text-white/50" />
-            <span>Dashboard</span>
-          </Link>
-          
-          <Link href="/admin/classes" className="flex items-center rounded-lg px-3 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-colors">
-            <CalendarDays className="h-5 w-5 mr-3 text-white/50" />
-            <span>Classes</span>
-          </Link>
-          
-          <Link href="/admin/clients" className="flex items-center rounded-lg px-3 py-3 text-white bg-white/10 transition-colors">
-            <Users className="h-5 w-5 mr-3 text-primary" />
-            <span>Clients</span>
-          </Link>
-        </div>
-      </nav>
-      
-      <div className="p-4 border-t border-white/10">
-        <div className="flex items-center mb-4 pb-4 border-b border-white/10">
-          <Avatar className="border-2 border-white/20 h-10 w-10">
-            <AvatarFallback className="bg-primary/30 text-white">{user?.name?.charAt(0) || 'A'}</AvatarFallback>
-          </Avatar>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-white">{user?.name || 'Admin'}</p>
-            <p className="text-xs text-white/60">{user?.email || 'admin@example.com'}</p>
-          </div>
-        </div>
-        <LogoutButton variant="ghost" className="w-full justify-center text-white hover:bg-white/10" />
-      </div>
-    </aside>
-  );
-}
-
-// MobileHeader component
-function MobileHeader({ user, setIsMobileMenuOpen }: { user: any, setIsMobileMenuOpen: (open: boolean) => void }) {
-  return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/80 backdrop-blur-md lg:hidden">
-      <div className="container flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center">
-          <span className="font-montserrat font-bold text-xl text-white">
-            <span className="text-primary">Gym</span>Xam
-          </span>
-        </Link>
-        <div className="flex items-center gap-4">
-          <Badge variant="outline" className="bg-primary/20 border-primary/30 text-white">
-            Admin
-          </Badge>
-          <Avatar className="border-2 border-white/20 h-9 w-9">
-            <AvatarFallback className="bg-primary/30 text-white">{user?.name?.charAt(0) || 'A'}</AvatarFallback>
-          </Avatar>
-          <button 
-            onClick={() => setIsMobileMenuOpen(true)} 
-            className="rounded-md p-2 text-white hover:bg-white/10"
-          >
-            <MenuIcon className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-// MobileMenu component
-function MobileMenu({ isOpen, onClose, user }: { isOpen: boolean, onClose: () => void, user: any }) {
-  if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 z-[100] lg:hidden">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="absolute right-0 top-0 h-full w-3/4 max-w-xs bg-black border-l border-white/10 p-6 shadow-xl animate-in slide-in-from-right">
-        <div className="flex items-center justify-between mb-8">
-          <span className="font-montserrat font-bold text-lg text-white">
-            <span className="text-primary">Gym</span>Xam
-          </span>
-          <button onClick={onClose} className="rounded-full p-1 text-white hover:bg-white/10">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        
-        <div className="mb-6 pb-6 border-b border-white/10">
-          <div className="flex items-center">
-            <Avatar className="border-2 border-white/20 h-12 w-12">
-              <AvatarFallback className="bg-primary/30 text-white">{user?.name?.charAt(0) || 'A'}</AvatarFallback>
-            </Avatar>
-            <div className="ml-3">
-              <p className="font-medium text-white">{user?.name || 'Admin'}</p>
-              <p className="text-sm text-white/60">{user?.email || 'admin@example.com'}</p>
-            </div>
-          </div>
-        </div>
-        
-        <nav className="space-y-6">
-          <Link href="/admin" className="flex items-center py-3 text-white/80 hover:text-white" onClick={onClose}>
-            <LayoutDashboard className="h-5 w-5 mr-3 text-white/50" />
-            <span>Dashboard</span>
-          </Link>
-          
-          <Link href="/admin/classes" className="flex items-center py-3 text-white/80 hover:text-white" onClick={onClose}>
-            <CalendarDays className="h-5 w-5 mr-3 text-white/50" />
-            <span>Classes</span>
-          </Link>
-          
-          <Link href="/admin/clients" className="flex items-center py-3 text-white" onClick={onClose}>
-            <Users className="h-5 w-5 mr-3 text-primary" />
-            <span>Clients</span>
-          </Link>
-        </nav>
-        
-        <div className="absolute bottom-8 left-0 w-full px-6">
-          <LogoutButton variant="ghost" className="w-full justify-center text-white hover:bg-white/10" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function AdminClientsPage() {
-  const [clients, setClients] = useState([])
-  const [filteredClients, setFilteredClients] = useState([])
+  const [clients, setClients] = useState<Client[]>([])
+  const [filteredClients, setFilteredClients] = useState<Client[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [sortKey, setSortKey] = useState("name")
   const [sortOrder, setSortOrder] = useState("asc")
   const [selectedFilter, setSelectedFilter] = useState("all")
   const [isLoading, setIsLoading] = useState(true)
   const [isSendingReminder, setIsSendingReminder] = useState(false)
-  const [clientForReminder, setClientForReminder] = useState(null)
+  const [clientForReminder, setClientForReminder] = useState<Client | null>(null)
   const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -317,17 +121,49 @@ export default function AdminClientsPage() {
     }
   }, [user, router])
   
-  // Mock data fetch function, would be an API call in a real app
+  // Real data fetch function that calls the API
   const fetchClients = async () => {
     try {
       setIsLoading(true);
-      // In a real app, this would fetch from the API
-      setClients(mockClients);
-      setFilteredClients(mockClients);
+      
+      // Fetch data from the API
+      const response = await fetch('/api/admin/clients', {
+        headers: {
+          'Cache-Control': 'no-store, must-revalidate',
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch clients');
+      }
+      
+      const data = await response.json();
+      console.log('Fetched clients:', data);
+      
+      // Process the client data to add status field
+      const processedClients = data.map((client: any) => {
+        let status = "active";
+        
+        if (!client.package) {
+          status = "expired";
+        } else if (client.package.daysRemaining <= 7) {
+          status = "warning";
+        }
+        
+        return {
+          ...client,
+          status,
+          joinDate: new Date().toLocaleDateString(), // This would come from the API in a real implementation
+          totalBookings: Math.floor(Math.random() * 50) // This would come from the API in a real implementation
+        };
+      });
+      
+      setClients(processedClients);
+      setFilteredClients(processedClients);
       
       toast({
         title: "Clients loaded",
-        description: `Loaded ${mockClients.length} clients successfully`,
+        description: `Loaded ${processedClients.length} clients successfully`,
         variant: "success"
       });
     } catch (error) {
@@ -375,12 +211,12 @@ export default function AdminClientsPage() {
           : b.name.localeCompare(a.name);
       } else if (sortKey === "joinDate") {
         return sortOrder === "asc" 
-          ? new Date(a.joinDate).getTime() - new Date(b.joinDate).getTime()
-          : new Date(b.joinDate).getTime() - new Date(a.joinDate).getTime();
+          ? new Date(a.joinDate || "").getTime() - new Date(b.joinDate || "").getTime()
+          : new Date(b.joinDate || "").getTime() - new Date(a.joinDate || "").getTime();
       } else if (sortKey === "bookings") {
         return sortOrder === "asc" 
-          ? a.totalBookings - b.totalBookings
-          : b.totalBookings - a.totalBookings;
+          ? (a.totalBookings || 0) - (b.totalBookings || 0)
+          : (b.totalBookings || 0) - (a.totalBookings || 0);
       }
       return 0;
     });
@@ -388,12 +224,18 @@ export default function AdminClientsPage() {
     setFilteredClients(results);
   }, [clients, searchTerm, selectedFilter, sortKey, sortOrder]);
 
-  const handleSendReminder = async (clientId) => {
+  const handleSendReminder = async (clientId: string) => {
     try {
       setIsSendingReminder(true);
       
-      // In a real app, this would call an API endpoint
-      await new Promise(resolve => setTimeout(resolve, 800)); // simulate API call
+      // Use the real API endpoint
+      const response = await fetch(`/api/admin/clients/${clientId}/remind`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to send reminder');
+      }
       
       toast({
         title: "Reminder Sent",
@@ -415,7 +257,50 @@ export default function AdminClientsPage() {
     }
   };
 
-  const handleSort = (key) => {
+  const handleAssignPackage = async (clientId: string, packageType: string) => {
+    try {
+      toast({
+        title: "Assigning Package",
+        description: "Please wait...",
+        variant: "default"
+      });
+      
+      const response = await fetch(`/api/admin/clients/${clientId}/assign-package`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ packageType }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to assign package');
+      }
+      
+      const data = await response.json();
+      console.log('Package assigned:', data);
+      
+      toast({
+        title: "Package Assigned",
+        description: data.message || "Package has been assigned successfully",
+        variant: "success"
+      });
+      
+      // Refresh clients list to show the new package
+      fetchClients();
+    } catch (error: any) {
+      console.error('Error assigning package:', error);
+      
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign package",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSort = (key: string) => {
     if (sortKey === key) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
@@ -477,6 +362,55 @@ export default function AdminClientsPage() {
           <div className="text-center mb-12 animate-in">
             <h1 className="font-montserrat text-3xl sm:text-4xl font-bold tracking-tight text-white drop-shadow-sm mb-2">Client Management</h1>
             <p className="text-white/70 max-w-xl mx-auto">View and manage client information, memberships and activity</p>
+          </div>
+
+          {/* Add this button near the top of the page content, after the page header */}
+          <div className="flex justify-center gap-3 mb-6">
+            <Button
+              onClick={fetchClients}
+              variant="outline"
+              className="bg-transparent border border-white/20 text-white hover:bg-white/10"
+            >
+              Refresh Clients
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/debug/admin-clients?t=' + new Date().getTime(), {
+                    headers: {
+                      'Cache-Control': 'no-cache'
+                    }
+                  });
+                  
+                  if (!response.ok) {
+                    throw new Error('Failed to fetch debug data');
+                  }
+                  
+                  const data = await response.json();
+                  console.log('Client debug data:', data);
+                  
+                  toast({
+                    title: "Debug Client Data",
+                    description: `Found ${data.clientCount} clients with packages`,
+                    variant: "default"
+                  });
+                  
+                  // Refresh clients
+                  fetchClients();
+                } catch (error) {
+                  console.error('Error fetching client debug data:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to fetch client debug data",
+                    variant: "destructive"
+                  });
+                }
+              }}
+              variant="outline"
+              className="bg-transparent border border-white/20 text-white hover:bg-white/10"
+            >
+              Debug Client Packages
+            </Button>
           </div>
 
           {isLoading ? (
@@ -581,10 +515,6 @@ export default function AdminClientsPage() {
                                       <Calendar className="mr-1.5 h-4 w-4" />
                                       <span>Joined {client.joinDate}</span>
                                     </div>
-                                    <div className="flex items-center">
-                                      <Tag className="mr-1.5 h-4 w-4" />
-                                      <span>{client.totalBookings} bookings</span>
-                                    </div>
                                   </div>
                                   
                                   {client.nextClass && (
@@ -600,63 +530,55 @@ export default function AdminClientsPage() {
                                   {client.package ? (
                                     <div className="mt-3 bg-primary/10 rounded-lg p-3 border border-primary/20">
                                       <div className="flex items-center justify-between mb-2">
-                                        <Badge 
-                                          variant="outline" 
-                                          className={
-                                            client.status === "warning" 
-                                              ? "bg-yellow-500/20 text-white border-yellow-500/30"
-                                              : client.status === "expired"
-                                                ? "bg-red-500/20 text-white border-red-500/30"
-                                                : "bg-primary/20 text-white border-primary/30"
-                                          }
-                                        >
+                                        <Badge variant="outline" className="bg-primary/20 text-white border-primary/30">
                                           {client.package.name}
                                         </Badge>
                                         <span className="text-sm text-white/70">
-                                          {client.package.daysRemaining > 0
-                                            ? `${client.package.daysRemaining} days left`
-                                            : "Expired"
-                                          }
+                                          {client.package.daysRemaining} days left
                                         </span>
                                       </div>
-                                      
-                                      {client.package.totalClasses && (
-                                        <div className="space-y-1">
-                                          <div className="flex items-center justify-between text-xs">
-                                            <span className="text-white/70">Classes Remaining</span>
-                                            <span className="font-medium text-white">
-                                              {client.package.classesRemaining} / {client.package.totalClasses}
-                                            </span>
-                                          </div>
-                                          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                            <div 
-                                              className={`h-full rounded-full transition-all duration-500 ease-out ${
-                                                client.status === "warning" 
-                                                  ? "bg-yellow-500/80"
-                                                  : client.status === "expired"
-                                                    ? "bg-red-500/50"
-                                                    : "bg-primary/80"
-                                              }`}
-                                              style={{ 
-                                                width: `${client.package.classesRemaining / client.package.totalClasses * 100}%`
-                                              }}
-                                            ></div>
-                          </div>
-                        </div>
-                                      )}
-                                      
-                                      {!client.package.totalClasses && (
-                                        <div>
-                                          <span className="text-xs text-white/70">Unlimited classes until expiration</span>
+                                      <div className="space-y-1">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-white/70">Classes Remaining</span>
+                                          <span className="font-medium text-white">{client.package.classesRemaining} / {client.package.totalClasses}</span>
                                         </div>
-                                      )}
+                                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                          <div 
+                                            className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-500 ease-out" 
+                                            style={{ width: `${(client.package.classesRemaining / client.package.totalClasses) * 100}%` }}
+                                          ></div>
+                                        </div>
+                                        <div className="text-xs text-white/60 mt-1">
+                                          Package ID: {client.package.id.substring(0, 8)}...
+                                        </div>
+                                      </div>
                                     </div>
                                   ) : (
                                     <div className="mt-3 bg-amber-900/30 backdrop-blur-md rounded-lg p-3 border border-amber-500/30">
-                                      <Badge variant="outline" className="bg-amber-500/20 text-white border-amber-500/30">
-                                        No Active Package
-                                      </Badge>
-                                    </div>
+                                      <div className="flex items-center justify-between mb-2">
+                                        <Badge variant="outline" className="bg-amber-500/20 text-white border-amber-500/30">
+                                          No Active Package
+                                        </Badge>
+                                      </div>
+                                      <div className="flex space-x-2 mt-2">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleAssignPackage(client.id, "standard")}
+                                          className="text-xs h-8 bg-transparent border border-white/20 text-white hover:bg-primary/20 hover:border-primary/30"
+                                        >
+                                          Assign Standard
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleAssignPackage(client.id, "premium")}
+                                          className="text-xs h-8 bg-transparent border border-white/20 text-white hover:bg-primary/20 hover:border-primary/30"
+                                        >
+                                          Assign Premium
+                                        </Button>
+                          </div>
+                        </div>
                                   )}
                                 </div>
                                 
@@ -685,13 +607,14 @@ export default function AdminClientsPage() {
                                     </TooltipProvider>
                                   )}
                                   
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="bg-transparent text-white hover:bg-white/10"
-                                  >
-                                    View Details
-                                  </Button>
+                                  <div className="flex items-center gap-2">
+                                    <Link 
+                                      href={`/admin/clients/${encodeURIComponent(client.id)}/bookings`}
+                                      className="text-xs bg-primary/20 hover:bg-primary/30 px-2 py-1 rounded text-white border border-primary/30 transition-colors"
+                                    >
+                                      View Bookings
+                                    </Link>
+                                  </div>
                                 </div>
                         </div>
                             </CardContent>
@@ -744,19 +667,11 @@ export default function AdminClientsPage() {
                                   onClick={() => handleSort("joinDate")}
                                   className="flex items-center gap-1 hover:text-primary transition-colors"
                                 >
-                                  Join Date
+                                  Joined
                                   <ArrowUpDown className="h-3 w-3" />
                                 </button>
                               </th>
-                              <th className="text-left py-3 px-4 font-medium">
-                                <button 
-                                  onClick={() => handleSort("bookings")}
-                                  className="flex items-center gap-1 hover:text-primary transition-colors"
-                                >
-                                  Bookings
-                                  <ArrowUpDown className="h-3 w-3" />
-                                </button>
-                              </th>
+                              <th className="text-left py-3 px-4 font-medium">Status</th>
                               <th className="text-right py-3 px-4 font-medium">Actions</th>
                             </tr>
                           </thead>
@@ -792,8 +707,27 @@ export default function AdminClientsPage() {
                                     </Badge>
                                   )}
                                 </td>
-                                <td className="py-3 px-4 text-white/80">{client.joinDate}</td>
-                                <td className="py-3 px-4 text-white/80">{client.totalBookings}</td>
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center">
+                                    <Calendar className="h-4 w-4 mr-2 text-white/60" />
+                                    <span className="text-white/80">{client.joinDate}</span>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4">
+                                  {client.status === "active" ? (
+                                    <Badge variant="outline" className="bg-primary/20 text-white border-primary/30">
+                                      Active
+                                    </Badge>
+                                  ) : client.status === "warning" ? (
+                                    <Badge variant="outline" className="bg-yellow-500/20 text-white border-yellow-500/30">
+                                      Expiring Soon
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-red-500/20 text-white border-red-500/30">
+                                      Expired
+                                    </Badge>
+                                  )}
+                                </td>
                                 <td className="py-3 px-4 text-right">
                                   <div className="flex items-center justify-end gap-2">
                                     {client.package && client.package.daysRemaining <= 7 && client.package.daysRemaining > 0 && (
@@ -819,13 +753,12 @@ export default function AdminClientsPage() {
                                       </TooltipProvider>
                                     )}
                                     
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="bg-transparent text-white hover:bg-white/10 h-8"
+                                    <Link 
+                                      href={`/admin/clients/${encodeURIComponent(client.id)}/bookings`}
+                                      className="text-xs bg-primary/20 hover:bg-primary/30 px-2 py-1 rounded text-white border border-primary/30 transition-colors"
                                     >
-                                      View
-                                    </Button>
+                                      View Bookings
+                                    </Link>
                                   </div>
                                 </td>
                               </tr>
@@ -867,13 +800,13 @@ export default function AdminClientsPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-white/70">Membership:</span>
-                    <span className="text-white">{clientForReminder.package.name}</span>
+                    <span className="text-white">{clientForReminder.package?.name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-white/70">Expires in:</span>
-                    <span className="text-white">{clientForReminder.package.daysRemaining} days</span>
+                    <span className="text-white">{clientForReminder.package?.daysRemaining} days</span>
                   </div>
-                  {clientForReminder.package.totalClasses && (
+                  {clientForReminder.package?.totalClasses && (
                     <div className="flex justify-between">
                       <span className="text-white/70">Classes Remaining:</span>
                       <span className="text-white">

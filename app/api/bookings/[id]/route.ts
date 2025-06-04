@@ -89,39 +89,135 @@ export async function DELETE(
       }, { status: 400 })
     }
 
-    // Use a transaction to ensure all operations succeed or fail together
-    await prisma.$transaction(async (tx) => {
+    // Get the class to decrement current bookings
+    const classData = await prisma.class.findUnique({
+      where: { id: booking.classId }
+    })
+
+    if (!classData) {
+      return NextResponse.json({ message: "Class not found" }, { status: 404 })
+    }
+
+    // Start a transaction to ensure all operations succeed or fail together
+    const result = await prisma.$transaction(async (tx) => {
       // Delete the booking
-      await tx.booking.delete({
+      const deletedBooking = await tx.booking.delete({
         where: { id: bookingId }
       })
 
-      // Decrement the class current bookings
-      await tx.class.update({
+      // Decrement current bookings
+      const updatedClass = await tx.class.update({
         where: { id: booking.classId },
-        data: { currentBookings: { decrement: 1 } }
+        data: { 
+          currentBookings: {
+            decrement: 1
+          }
+        }
       })
 
-      // Increment the user's remaining classes in their package
-      await tx.package.updateMany({
-        where: {
+      // Create a notification for the user
+      await tx.notification.create({
+        data: {
           userId: booking.userId,
-          active: true,
-        },
-        data: { classesRemaining: { increment: 1 } }
+          type: "booking_cancelled",
+          message: `Your booking for ${booking.class.name} on ${new Date(booking.class.date).toLocaleDateString()} at ${booking.class.time} has been cancelled.`
+        }
       })
+
+      // Check if there is anyone on the waitlist for this class
+      const nextInWaitlist = await tx.waitlist.findFirst({
+        where: { classId: booking.classId },
+        orderBy: { position: 'asc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              packages: {
+                where: {
+                  active: true,
+                  classesRemaining: { gt: 0 },
+                  endDate: { gte: new Date() }
+                },
+                take: 1
+              }
+            }
+          }
+        }
+      })
+
+      // If there's someone on the waitlist and they have an active package
+      if (nextInWaitlist && nextInWaitlist.user.packages.length > 0) {
+        // Create a booking for the next person in waitlist
+        const newBooking = await tx.booking.create({
+          data: {
+            userId: nextInWaitlist.userId,
+            classId: booking.classId,
+            status: "confirmed"
+          }
+        })
+
+        // Increment current bookings (since we already decremented it)
+        await tx.class.update({
+          where: { id: booking.classId },
+          data: { 
+            currentBookings: {
+              increment: 1
+            }
+          }
+        })
+
+        // Delete the waitlist entry
+        await tx.waitlist.delete({
+          where: { id: nextInWaitlist.id }
+        })
+
+        // Shift the remaining waitlist positions
+        await tx.waitlist.updateMany({
+          where: { 
+            classId: booking.classId,
+            position: { gt: nextInWaitlist.position } 
+          },
+          data: {
+            position: { decrement: 1 }
+          }
+        })
+
+        // Create a notification for the promoted user
+        await tx.notification.create({
+          data: {
+            userId: nextInWaitlist.userId,
+            type: "waitlist_promoted",
+            message: `Great news! A spot opened up in ${booking.class.name} on ${new Date(booking.class.date).toLocaleDateString()} at ${booking.class.time}. You've been automatically moved from the waitlist to confirmed.`
+          }
+        })
+
+        // Return info about the promotion
+        return {
+          cancelled: deletedBooking,
+          promoted: {
+            userId: nextInWaitlist.userId,
+            userName: nextInWaitlist.user.name,
+            bookingId: newBooking.id
+          }
+        }
+      }
+
+      // If no promotion happened, just return the cancelled booking
+      return { 
+        cancelled: deletedBooking,
+        promoted: null
+      }
     })
-    
-    // Return success response
+
     return NextResponse.json({ 
       message: "Booking cancelled successfully",
-      bookingId
+      promotedFromWaitlist: result.promoted ? true : false,
+      result
     })
   } catch (error) {
-    console.error("Error cancelling booking:", error)
-    return NextResponse.json(
-      { error: "Failed to cancel booking" },
-      { status: 500 }
-    )
+    console.error(`Error cancelling booking:`, error)
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 } 

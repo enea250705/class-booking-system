@@ -21,11 +21,13 @@ model User {
   email         String    @unique
   password      String
   role          String    @default("user")
+  approved      Boolean   @default(false)
   emailVerified DateTime?
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   bookings      Booking[]
+  waitlist      Waitlist[]
   notifications Notification[]
   packages      Package[]
 }
@@ -38,13 +40,14 @@ model Class {
   date            DateTime
   description     String?
   enabled         Boolean   @default(true)
-  capacity        Int       @default(15)
+  capacity        Int       @default(5)
   currentBookings Int       @default(0)
   paymentMethod   String    @default("Cash")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   price           Float?    @default(0)
   bookings        Booking[]
+  waitlist        Waitlist[]
 }
 
 model Booking {
@@ -56,6 +59,18 @@ model Booking {
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+}
+
+model Waitlist {
+  id        String   @id @default(cuid())
+  userId    String
+  classId   String
+  createdAt DateTime @default(now())
+  position  Int      @default(0)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, classId])
 }
 
 model Package {
@@ -78,6 +93,14 @@ model Notification {
   type      String
   message   String
   read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  value     String   // JSON string containing the settings
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

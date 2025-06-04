@@ -49,6 +49,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Invalid email or password" }, { status: 401 });
     }
     
+    // Check if user is approved
+    if (!user.approved && user.role !== "admin") {
+      console.log("User not approved:", email);
+      return NextResponse.json({ message: "Your account is pending approval by an administrator" }, { status: 403 });
+    }
+    
     // Verify password
     let passwordMatch;
     try {
@@ -66,15 +72,19 @@ export async function POST(request: Request) {
     // Generate JWT
     let token;
     try {
+      // Match the specific token structure provided by the user
       token = jwt.sign(
         {
-          id: user.id,
-          name: user.name,
-          email: user.email,
+          userId: user.id,
           role: user.role,
+          // Add timestamp for issued at time
+          iat: Math.floor(Date.now() / 1000)
         },
         process.env.JWT_SECRET || 'fallback_secret_for_development',
-        { expiresIn: "7d" }
+        { 
+          expiresIn: "365d", // Set to 1 year for long-term persistence
+          algorithm: "HS256" // Explicitly set the algorithm
+        }
       );
       console.log("JWT generated successfully");
     } catch (jwtError) {
@@ -82,7 +92,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Authentication error" }, { status: 500 });
     }
     
-    // Set JWT as HTTP-only cookie
+    // Set JWT as HTTP-only cookie with extended expiration (30 days) for persistent login
     const response = NextResponse.json(
       { 
         message: "Login successful",
@@ -97,14 +107,46 @@ export async function POST(request: Request) {
       { status: 200 }
     );
     
+    // Set auth token in cookie with optimized settings for persistence
     response.cookies.set({
       name: "auth_token",
       value: token,
-      httpOnly: true,
+      httpOnly: true, // Set to true for security - prevents JavaScript access
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "strict", // More restrictive setting for better security
       path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 365, // 365 days (1 year) for persistent login
+    });
+    
+    // Set a secondary cookie as backup
+    response.cookies.set({
+      name: "auth_session",
+      value: user.id,
+      httpOnly: false, // Set to false to allow JS access for debugging
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365, // 365 days (1 year)
+    });
+    
+    // Log cookie details for debugging
+    console.log("Setting cookies with the following details:", {
+      authToken: {
+        value: token.substring(0, 20) + "...",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365
+      },
+      authSession: {
+        value: user.id,
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365
+      }
     });
     
     console.log("Login successful, returning response");
