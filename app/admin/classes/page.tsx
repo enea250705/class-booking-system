@@ -21,7 +21,12 @@ import {
   Filter,
   ArrowUpDown,
   MenuIcon,
-  Trash2
+  Trash2,
+  UserPlus,
+  UserMinus,
+  Mail,
+  Eye,
+  Calendar
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -41,23 +46,53 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger
 } from "@/components/ui/tabs"
-import { AdminSidebar, MobileHeader, MobileMenu } from "../components/AdminLayout"
+import { AdminLayout } from '../components/AdminLayout'
 
 // Remove the mock data and add a proper interface
-interface ClassItem {
+interface Booking {
+  id: string;
+  userId: string;
+  status: string;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+interface Class {
   id: string;
   name: string;
   day: string;
-  date: string;
   time: string;
+  date: string;
+  description?: string;
   enabled: boolean;
   capacity: number;
   currentBookings: number;
+  bookings: Booking[];
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
 }
 
 // Define loader component for when content is loading
@@ -71,18 +106,25 @@ const LoadingIndicator = () => (
 );
 
 export default function AdminClassesPage() {
-  const [classes, setClasses] = useState<ClassItem[]>([])
-  const [filteredClasses, setFilteredClasses] = useState<ClassItem[]>([])
+  const [classes, setClasses] = useState<Class[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [filteredClasses, setFilteredClasses] = useState<Class[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [sortKey, setSortKey] = useState("date")
   const [sortOrder, setSortOrder] = useState("asc")
   const [selectedFilter, setSelectedFilter] = useState("all")
   const [isLoading, setIsLoading] = useState(true)
   const [isDeletingClass, setIsDeletingClass] = useState(false)
+  const [isDeletingPastClasses, setIsDeletingPastClasses] = useState(false)
   const [classToDelete, setClassToDelete] = useState<any>(null)
   const [errorMessage, setErrorMessage] = useState("")
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isManageBookingsOpen, setIsManageBookingsOpen] = useState(false)
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState("")
+  const [userSearchTerm, setUserSearchTerm] = useState('')
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null)
   const { user, logout } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
@@ -99,6 +141,7 @@ export default function AdminClassesPage() {
     } else if (user && user.role === "admin") {
       // Load data
       fetchClasses();
+      fetchUsers();
     }
   }, [user, router])
   
@@ -108,7 +151,7 @@ export default function AdminClassesPage() {
       setIsLoading(true);
       
       // Fetch classes from the API
-      const response = await fetch('/api/classes');
+      const response = await fetch('/api/admin/classes');
       
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
@@ -134,6 +177,18 @@ export default function AdminClassesPage() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/admin/users');
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data.users || []);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
     }
   };
 
@@ -193,8 +248,8 @@ export default function AdminClassesPage() {
       const updatedEnabled = !classToToggle.enabled;
       
       // Call API to update class
-      const response = await fetch(`/api/classes/${classId}`, {
-        method: 'PATCH',
+      const response = await fetch(`/api/admin/classes/${classId}/toggle-enabled`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -228,6 +283,10 @@ export default function AdminClassesPage() {
   };
 
   const handleDeleteClass = async (classId: string) => {
+    if (!window.confirm("Are you sure you want to delete this class? This action cannot be undone!")) {
+      return;
+    }
+    
     try {
       setIsDeletingClass(true);
       
@@ -264,14 +323,192 @@ export default function AdminClassesPage() {
     }
   };
 
-  const handleSort = (key: string) => {
-    if (sortKey === key) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortOrder("asc");
+  const handleDeletePastClasses = async () => {
+    if (!window.confirm("Are you sure you want to delete all past classes (older than 7 days)? This action cannot be undone!")) {
+      return;
+    }
+    
+    try {
+      setIsDeletingPastClasses(true);
+      
+      const response = await fetch('/api/admin/classes/delete-past', {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete past classes');
+      }
+      
+      const data = await response.json();
+      
+      toast({
+        title: "Success",
+        description: `Successfully deleted ${data.deleted} past classes`,
+      });
+      
+      // Refresh classes
+      fetchClasses();
+    } catch (error: any) {
+      console.error('Error deleting past classes:', error);
+      
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete past classes",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeletingPastClasses(false);
     }
   };
+
+  const handleSort = (key: string) => {
+    setSortKey(key);
+    setSortOrder(current => current === "asc" ? "desc" : "asc");
+  };
+
+  const handleToggleClassEnabled = async (classId: string, currentEnabled: boolean) => {
+    try {
+      const response = await fetch(`/api/admin/classes/${classId}/toggle-enabled`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          enabled: !currentEnabled
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: result.message,
+          variant: "success"
+        });
+        fetchClasses(); // Refresh the classes data
+      } else {
+        const error = await response.json();
+        toast({
+          title: error.error || 'Failed to update class status',
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling class enabled status:', error);
+      toast({
+        title: 'Failed to update class status',
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAddUserToClass = async () => {
+    if (!selectedClass || !selectedUserId) return;
+
+    try {
+      const response = await fetch(`/api/admin/classes/${selectedClass.id}/add-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: selectedUserId
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `User ${selectedClass.enabled ? 'added to' : 'pre-added to'} class successfully`,
+          variant: "success"
+        });
+        setIsAddUserOpen(false);
+        setSelectedUserId('');
+        fetchClasses(); // Refresh the classes data
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.error || 'Failed to add user to class',
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error adding user to class:', error);
+      toast({
+        title: "Error",
+        description: 'Failed to add user to class',
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRemoveUserFromClass = async (bookingId: string) => {
+    if (!selectedClass) return;
+
+    if (!confirm('Are you sure you want to remove this user from the class?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/classes/${selectedClass.id}/remove-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bookingId: bookingId
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: 'User removed from class successfully',
+          variant: "success"
+        });
+        fetchClasses(); // Refresh the classes data
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.error || 'Failed to remove user from class',
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error removing user from class:', error);
+      toast({
+        title: "Error",
+        description: 'Failed to remove user from class',
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openManageBookings = (classItem: Class) => {
+    setSelectedClass(classItem);
+    setIsManageBookingsOpen(true);
+  };
+
+  const openAddUser = (classItem: Class) => {
+    setSelectedClass(classItem);
+    setSelectedUserId('');
+    setUserSearchTerm('');
+    setIsAddUserOpen(true);
+  };
+
+  const availableUsers = users.filter(user => 
+    !selectedClass?.bookings.some(booking => booking.userId === user.id)
+  );
+
+  // Filter available users based on search term
+  const filteredAvailableUsers = userSearchTerm
+    ? availableUsers.filter(user => 
+        user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(userSearchTerm.toLowerCase())
+      )
+    : availableUsers;
 
   // Update the condition to render main content when user is confirmed
   if (!user) {
@@ -296,404 +533,412 @@ export default function AdminClassesPage() {
   }
 
   return (
-    <>
-      <div className="relative min-h-screen flex flex-col">
-        {/* Optimized background image with next/image */}
-        <div className="fixed inset-0 -z-10">
-          <Image 
-            src={bgImage}
-            alt="Admin dashboard background"
-            fill
-            priority
-            sizes="100vw"
-            quality={80}
-            className="object-cover object-center"
-          />
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-[1px]"></div>
+    <AdminLayout user={user}>
+      <div className="container mx-auto p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Class Management</h1>
+            <p className="text-gray-300">Manage class bookings and enable/disable classes</p>
           </div>
-        
-        {/* Desktop sidebar */}
-        <AdminSidebar user={user} />
-        
-        {/* Mobile header */}
-        <MobileHeader user={user} setIsMobileMenuOpen={setIsMobileMenuOpen} />
-        
-        {/* Mobile menu */}
-        <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} user={user} />
-
-        {/* Main content */}
-        <main className="flex-1 container max-w-6xl mx-auto lg:pl-64 py-8 sm:py-12 px-4 relative z-10">
-          {/* Page header */}
-          <div className="text-center mb-12 animate-in">
-            <h1 className="font-montserrat text-3xl sm:text-4xl font-bold tracking-tight text-white drop-shadow-sm mb-2">Class Management</h1>
-            <p className="text-white/70 max-w-xl mx-auto">Create, manage, and track fitness classes for your clients</p>
-          </div>
-
-          {/* Add this near the top of the page content, after the page header */}
-          <div className="flex justify-center gap-3 mb-6">
+          <div className="flex items-center gap-4">
             <Button
-              onClick={fetchClasses}
-              variant="outline"
-              className="bg-transparent border border-white/20 text-white hover:bg-white/10"
+              onClick={handleDeletePastClasses}
+              variant="destructive"
+              disabled={isDeletingPastClasses}
+              className="bg-red-600 hover:bg-red-700"
             >
-              Refresh Classes
+              {isDeletingPastClasses ? (
+                <span className="flex items-center gap-2">
+                  <div className="h-4 w-4 rounded-full border-2 border-white/20 border-r-transparent animate-spin"></div>
+                  Deleting Past Classes...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  Delete Past Classes
+                </span>
+              )}
             </Button>
-            <Button
-              onClick={async () => {
-                try {
-                  const response = await fetch('/api/classes?t=' + new Date().getTime(), {
-                    headers: {
-                      'Cache-Control': 'no-cache'
-                    }
-                  });
-                  
-                  if (!response.ok) {
-                    throw new Error('Failed to fetch debug data');
-                  }
-                  
-                  const data = await response.json();
-                  console.log('Class debug data:', data);
-                  
-                  toast({
-                    title: "Debug Class Data",
-                    description: `Found ${data.length} classes in database`,
-                    variant: "default"
-                  });
-                  
-                  // Refresh classes
-                  fetchClasses();
-                } catch (error) {
-                  console.error('Error fetching class debug data:', error);
-                  toast({
-                    title: "Error",
-                    description: "Failed to fetch class debug data",
-                    variant: "destructive"
-                  });
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-blue-400" />
+              <span className="text-sm font-medium text-gray-300">{classes.length} Total Classes</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search classes by name or day..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400"
+            />
+          </div>
+        </div>
+
+        {/* Classes Grid */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredClasses.map((classItem) => (
+            <Card key={classItem.id} className="bg-white/10 border-white/20 hover:bg-white/15 transition-all">
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-lg text-white">{classItem.name}</CardTitle>
+                    <p className="text-sm text-gray-300">{classItem.day} at {classItem.time}</p>
+                    <p className="text-sm text-gray-400">
+                      {new Date(classItem.date).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Badge variant={classItem.enabled ? "default" : "secondary"} className={classItem.enabled ? "bg-green-600" : ""}>
+                    {classItem.enabled ? "Enabled" : "Disabled"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-300">Bookings:</span>
+                  <Badge variant="outline" className="border-white/30 text-gray-300">
+                    {classItem.currentBookings}/{classItem.capacity}
+                  </Badge>
+                </div>
+
+                {classItem.description && (
+                  <p className="text-sm text-gray-400">{classItem.description}</p>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  {classItem.currentBookings > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openManageBookings(classItem)}
+                      className="w-full border-white/30 text-gray-300 hover:bg-white/10"
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      {classItem.enabled ? `View Bookings (${classItem.currentBookings})` : `View Pre-added Users (${classItem.currentBookings})`}
+                    </Button>
+                  )}
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openAddUser(classItem)}
+                    className="w-full border-white/30 text-gray-300 hover:bg-white/10"
+                    disabled={classItem.currentBookings >= classItem.capacity}
+                  >
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    {classItem.enabled ? "Add User" : "Pre-add User"}
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant={classItem.enabled ? "destructive" : "default"}
+                    onClick={() => handleToggleClassEnabled(classItem.id, classItem.enabled)}
+                    className="w-full"
+                  >
+                    {classItem.enabled ? (
+                      <>
+                        <Settings className="h-4 w-4 mr-1" />
+                        Disable Class
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="h-4 w-4 mr-1" />
+                        Enable & Send Emails
+                      </>
+                    )}
+                  </Button>
+
+                  {/* Delete button for past classes */}
+                  {new Date(classItem.date) < new Date() && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDeleteClass(classItem.id)}
+                      className="w-full bg-red-600 hover:bg-red-700"
+                      disabled={isDeletingClass}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete Class
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Manage Bookings Dialog */}
+        <Dialog open={isManageBookingsOpen} onOpenChange={setIsManageBookingsOpen}>
+          <DialogContent className="max-w-2xl bg-gray-900 border-gray-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">
+                {selectedClass?.enabled ? "Manage Bookings" : "Pre-populated Users"}: {selectedClass?.name} - {selectedClass?.day} at {selectedClass?.time}
+              </DialogTitle>
+              <DialogDescription className="text-gray-400">
+                {selectedClass?.enabled 
+                  ? "These users are confirmed and have received booking emails."
+                  : "These users are pre-added. They'll receive emails when you enable the class."
                 }
-              }}
-              variant="outline"
-              className="bg-transparent border border-white/20 text-white hover:bg-white/10"
-            >
-              Debug Classes
-            </Button>
-          </div>
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-white">Current Bookings</h4>
+                <Badge variant="outline" className="border-gray-600 text-gray-300">
+                  {selectedClass?.currentBookings}/{selectedClass?.capacity}
+                </Badge>
+              </div>
 
-          {isLoading ? (
-            <LoadingIndicator />
-          ) : (
-            <div className="space-y-8">
-              {/* Search and filters */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative md:col-span-2">
-                      <Input
-                    type="text"
-                    placeholder="Search by class name or day..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="bg-black/30 border-white/10 text-white pl-10 h-11"
-                  />
-                  <Search className="absolute left-3 top-3 h-5 w-5 text-white/50" />
+              {selectedClass?.bookings && selectedClass.bookings.length > 0 ? (
+                <div className="space-y-2">
+                  {selectedClass.bookings.map((booking) => (
+                    <div key={booking.id} className="flex items-center justify-between p-3 border border-gray-700 rounded-lg bg-gray-800">
+                      <div>
+                        <p className="font-medium text-white">{booking.user.name}</p>
+                        <p className="text-sm text-gray-400">{booking.user.email}</p>
+                        <p className="text-xs text-gray-500">
+                          Booked: {new Date(booking.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleRemoveUserFromClass(booking.id)}
+                      >
+                        <UserMinus className="h-4 w-4 mr-1" />
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-400">No bookings yet</p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsManageBookingsOpen(false)}
+                className="border-gray-600 text-gray-300 hover:bg-gray-800"
+              >
+                Close
+              </Button>
+              <Button onClick={() => openAddUser(selectedClass!)}>
+                <UserPlus className="h-4 w-4 mr-1" />
+                {selectedClass?.enabled ? "Add User" : "Pre-add User"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add User Dialog */}
+        <AlertDialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+          <AlertDialogContent className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md border-none rounded-none m-0 p-0">
+            <div className="h-screen w-screen flex items-center justify-center p-8">
+              <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-white/20 rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+                
+                {/* Header */}
+                <div className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-white/10 p-8">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <div className="w-20 h-20 bg-primary/20 rounded-2xl flex items-center justify-center">
+                        <UserPlus className="h-10 w-10 text-primary" />
+              </div>
+                      <div>
+                        <AlertDialogTitle className="text-4xl font-bold text-white mb-2">
+                {selectedClass?.enabled ? "Add User to Class" : "Pre-populate Class"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-white/70 text-xl">
+                {selectedClass?.enabled 
+                            ? "Adding a user will send them a booking confirmation email."
+                            : "Pre-add users without sending emails until class is enabled."
+                          }
+                        </AlertDialogDescription>
+                      </div>
+                    </div>
+                    <AlertDialogCancel className="bg-white/10 hover:bg-white/20 border-white/20 text-white h-14 w-14 rounded-2xl p-0 transition-all">
+                      <X className="h-7 w-7" />
+                    </AlertDialogCancel>
+                  </div>
+                </div>
+
+                {/* Main Content */}
+                <div className="p-8 overflow-y-auto max-h-[calc(90vh-200px)]">
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+                    
+                    {/* Left Side - Class Info & Status */}
+                    <div className="space-y-8">
+                      
+                      {/* Class Card */}
+                      <div className="bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded-2xl p-8">
+                        <div className="flex items-center justify-between mb-6">
+                          <h3 className="text-2xl font-bold text-white">Class Information</h3>
+                          <div className={`px-4 py-2 rounded-full text-base font-semibold ${
+                            selectedClass?.enabled 
+                              ? 'bg-green-500/20 text-green-400 border border-green-500/40' 
+                              : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                          }`}>
+                            {selectedClass?.enabled ? '🟢 Active' : '🟡 Pre-populate'}
+                          </div>
+              </div>
+
+                        <h4 className="text-3xl font-bold text-white mb-6">{selectedClass?.name}</h4>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="bg-white/10 rounded-xl p-4 text-center">
+                            <CalendarDays className="h-6 w-6 text-primary mx-auto mb-2" />
+                            <p className="text-white/60 text-sm">Day</p>
+                            <p className="text-white font-semibold text-lg">{selectedClass?.day}</p>
+                          </div>
+                          <div className="bg-white/10 rounded-xl p-4 text-center">
+                            <Clock className="h-6 w-6 text-primary mx-auto mb-2" />
+                            <p className="text-white/60 text-sm">Time</p>
+                            <p className="text-white font-semibold text-lg">{selectedClass?.time}</p>
+                          </div>
+                          <div className="bg-white/10 rounded-xl p-4 text-center">
+                            <Calendar className="h-6 w-6 text-primary mx-auto mb-2" />
+                            <p className="text-white/60 text-sm">Date</p>
+                            <p className="text-white font-semibold text-lg">
+                              {selectedClass?.date && new Date(selectedClass.date).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Selected User Card */}
+                      {selectedUserId && (
+                        <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/30 rounded-2xl p-8">
+                          <div className="flex items-center gap-4 mb-4">
+                            <div className="w-16 h-16 bg-green-500/30 rounded-2xl flex items-center justify-center">
+                              <Check className="w-8 h-8 text-green-400" />
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-bold text-green-400">Selected User</h3>
+                              <p className="text-green-300/80">Ready to add to class</p>
+                            </div>
+                          </div>
+                          <div className="bg-green-500/10 rounded-xl p-4">
+                            <p className="font-bold text-white text-xl mb-1">
+                              {filteredAvailableUsers.find(u => u.id === selectedUserId)?.name}
+                            </p>
+                            <p className="text-green-300">
+                              {filteredAvailableUsers.find(u => u.id === selectedUserId)?.email}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                 
-                <Select value={selectedFilter} onValueChange={setSelectedFilter}>
-                  <SelectTrigger className="bg-black/30 border-white/10 text-white h-11">
-                    <SelectValue placeholder="Filter by status" />
-                          </SelectTrigger>
-                  <SelectContent className="bg-black/80 backdrop-blur-lg border-white/10 text-white">
-                    <SelectItem value="all">All Classes</SelectItem>
-                    <SelectItem value="active">Active Only</SelectItem>
-                    <SelectItem value="inactive">Inactive Only</SelectItem>
-                    <SelectItem value="full">Fully Booked</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-              
-              {/* Classes list with tabs */}
-              <Card className="border-white/10 bg-black/40 backdrop-blur-md shadow-xl overflow-hidden">
-                <CardHeader className="border-b border-white/10 bg-black/30">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <CardTitle className="text-xl text-white">Class Schedule</CardTitle>
-                  </div>
-                </CardHeader>
-                <Tabs defaultValue="grid" className="w-full">
-                  <div className="px-6 pt-4 border-b border-white/10">
-                    <TabsList className="bg-black/50 border border-white/10 grid w-52 grid-cols-2">
-                      <TabsTrigger value="grid" className="data-[state=active]:bg-white data-[state=active]:text-black">
-                        Grid View
-                      </TabsTrigger>
-                      <TabsTrigger value="table" className="data-[state=active]:bg-white data-[state=active]:text-black">
-                        Table View
-                      </TabsTrigger>
-                    </TabsList>
-          </div>
+                    {/* Right Side - User Selection */}
+                    <div className="space-y-6">
+                      <h3 className="text-2xl font-bold text-white">Select User to Add</h3>
+                      
+                      {/* Search Bar */}
+                <div className="relative">
+                        <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 text-white/50 h-6 w-6" />
+                  <Input
+                    placeholder="Search users by name or email..."
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                          className="pl-14 bg-white/10 border-white/30 text-white placeholder-white/50 h-16 text-xl rounded-2xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
 
-                  <TabsContent value="grid" className="mt-0">
-                    <div className="p-6">
-                      {filteredClasses.length === 0 ? (
-                        <div className="text-center p-10">
-                          <div className="w-16 h-16 rounded-full bg-primary/10 mx-auto flex items-center justify-center mb-4">
-                            <CalendarDays className="h-8 w-8 text-white/60" />
+                      {/* User List */}
+                      <div className="bg-white/5 border border-white/20 rounded-2xl overflow-hidden">
+                        <div className="h-96 overflow-y-auto">
+                  {filteredAvailableUsers.length > 0 ? (
+                            <div className="p-4 space-y-3">
+                      {filteredAvailableUsers.map((user) => (
+                        <div
+                          key={user.id}
+                          onClick={() => setSelectedUserId(user.id)}
+                                  className={`p-5 rounded-xl cursor-pointer transition-all duration-300 ${
+                            selectedUserId === user.id
+                                      ? 'bg-primary/20 border-2 border-primary/50 shadow-lg transform scale-[1.02]'
+                                      : 'hover:bg-white/10 border-2 border-transparent hover:border-white/20'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                                      <p className="font-bold text-white text-xl">{user.name}</p>
+                                      <p className="text-white/70 text-lg">{user.email}</p>
+                            </div>
+                            {selectedUserId === user.id && (
+                                      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                                        <Check className="w-5 h-5 text-white" />
+                              </div>
+                            )}
                           </div>
-                          <h3 className="font-medium text-white text-lg">No classes found</h3>
-                          <p className="text-white/70 mt-2 max-w-xs mx-auto">
-                            {searchTerm ? 
-                              `No classes match "${searchTerm}". Try a different search term.` : 
-                              'No classes match the selected filters.'}
-                          </p>
-                          {searchTerm && (
-                            <Button 
-                              variant="outline" 
-                              onClick={() => setSearchTerm("")} 
-                              className="mt-4 bg-transparent border border-white/20 text-white hover:bg-white/10"
-                            >
-                              Clear Search
-                            </Button>
-                          )}
                         </div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {filteredClasses.map((cls) => (
-                            <Card key={cls.id} className="bg-black/30 border-white/10 hover:border-white/20 transition-all group overflow-hidden">
-                              <Link href={`/admin/classes/${cls.id}`}>
-                              <CardContent className="p-6 relative">
-                  <div className="flex items-center justify-between">
-                                  <div className="space-y-2">
-                                    <div className="flex items-center">
-                                      <h3 className="font-semibold text-white text-xl group-hover:text-primary transition-colors">{cls.name}</h3>
-                                      <Badge className={`ml-3 ${cls.enabled ? 'bg-primary/30 text-white' : 'bg-neutral-800 text-white/70'}`}>
-                                        {cls.enabled ? 'Active' : 'Inactive'}
-                                      </Badge>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-sm text-white/70">
-                                      <div className="flex items-center">
-                                        <CalendarDays className="mr-1.5 h-4 w-4" />
-                                        <span>{new Date(cls.date).toLocaleDateString()}</span>
-                                      </div>
-                                      <div className="flex items-center">
-                                        <Clock className="mr-1.5 h-4 w-4" />
-                        <span>{cls.time}</span>
-                      </div>
-                                    </div>
-                                    <div className="flex items-center text-sm text-white/60">
-                                      <span>Bookings: {cls.currentBookings} / {cls.capacity}</span>
-                                      <span className="ml-4">Cash payment</span>
-                                    </div>
-                                    <div className="mt-2">
-                                      <div className="text-xs text-white/60 mb-1">Capacity</div>
-                                      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                        <div 
-                                          className={`h-full rounded-full transition-all duration-500 ease-out ${
-                                            cls.currentBookings >= cls.capacity 
-                                              ? 'bg-red-500/80' 
-                                              : cls.currentBookings / cls.capacity > 0.7 
-                                                ? 'bg-yellow-500/80' 
-                                                : 'bg-primary/80'
-                                          }`}
-                                          style={{ width: `${Math.min(100, (cls.currentBookings / cls.capacity) * 100)}%` }}
-                                        ></div>
-                                      </div>
+                      ))}
+                    </div>
+                          ) : (
+                            <div className="flex items-center justify-center h-full p-12">
+                              <div className="text-center">
+                                {userSearchTerm ? (
+                                  <>
+                                    <Search className="h-20 w-20 text-white/40 mx-auto mb-6" />
+                                    <p className="text-white/70 text-2xl font-semibold">No users found</p>
+                                    <p className="text-white/50 text-lg">Try a different search term</p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Users className="h-20 w-20 text-white/40 mx-auto mb-6" />
+                                    <p className="text-white/70 text-2xl font-semibold">No available users</p>
+                                    <p className="text-white/50 text-lg">All users are already in this class</p>
+                                  </>
+                                )}
+                    </div>
+                    </div>
+                  )}
+                </div>
                       </div>
                     </div>
-                                  </div>
-                                </CardContent>
-                              </Link>
-                              <div className="p-4 pt-0 flex justify-end space-x-2 border-t border-white/10 mt-2">
-                                      <Switch 
-                                        checked={cls.enabled} 
-                                        onCheckedChange={() => handleToggleClass(cls.id)} 
-                                        className="data-[state=checked]:bg-primary"
-                                      />
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => {
-                                          setClassToDelete(cls);
-                                          setIsDeleteDialogOpen(true);
-                                        }}
-                                        className="text-white/50 hover:text-white hover:bg-red-500/20"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-              </Card>
-            ))}
-          </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="table" className="mt-0">
-                    <div className="p-6">
-                      {filteredClasses.length === 0 ? (
-                        <div className="text-center p-10">
-                          <div className="w-16 h-16 rounded-full bg-primary/10 mx-auto flex items-center justify-center mb-4">
-                            <CalendarDays className="h-8 w-8 text-white/60" />
-                          </div>
-                          <h3 className="font-medium text-white text-lg">No classes found</h3>
-                          <p className="text-white/70 mt-2 max-w-xs mx-auto">
-                            {searchTerm ? 
-                              `No classes match "${searchTerm}". Try a different search term.` : 
-                              'No classes match the selected filters.'}
-                          </p>
-                          {searchTerm && (
-                            <Button 
-                              variant="outline" 
-                              onClick={() => setSearchTerm("")} 
-                              className="mt-4 bg-transparent border border-white/20 text-white hover:bg-white/10"
-                            >
-                              Clear Search
-                            </Button>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full border-collapse text-white">
-                            <thead className="bg-black/40 border-b border-white/10">
-                              <tr>
-                                <th className="text-left py-3 px-4 font-medium">
-                                  <button 
-                                    onClick={() => handleSort("name")}
-                                    className="flex items-center gap-1 hover:text-primary transition-colors"
-                                  >
-                                    Class Name
-                                    <ArrowUpDown className="h-3 w-3" />
-                                  </button>
-                                </th>
-                                <th className="text-left py-3 px-4 font-medium">
-                                  <button 
-                                    onClick={() => handleSort("date")}
-                                    className="flex items-center gap-1 hover:text-primary transition-colors"
-                                  >
-                                    Date
-                                    <ArrowUpDown className="h-3 w-3" />
-                                  </button>
-                                </th>
-                                <th className="text-left py-3 px-4 font-medium">Time</th>
-                                <th className="text-left py-3 px-4 font-medium">
-                                  <button 
-                                    onClick={() => handleSort("bookings")}
-                                    className="flex items-center gap-1 hover:text-primary transition-colors"
-                                  >
-                                    Bookings
-                                    <ArrowUpDown className="h-3 w-3" />
-                                  </button>
-                                </th>
-                                <th className="text-left py-3 px-4 font-medium">Status</th>
-                                <th className="text-right py-3 px-4 font-medium">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {filteredClasses.map((cls) => (
-                                <tr key={cls.id} className="border-b border-white/5 hover:bg-white/5">
-                                  <td className="py-3 px-4">{cls.name}</td>
-                                  <td className="py-3 px-4">{new Date(cls.date).toLocaleDateString()}</td>
-                                  <td className="py-3 px-4">{cls.time}</td>
-                                  <td className="py-3 px-4">
-                                    <span 
-                                      className={`inline-flex items-center ${
-                                        cls.currentBookings >= cls.capacity 
-                                        ? 'text-red-400' 
-                                        : cls.currentBookings / cls.capacity > 0.7 
-                                        ? 'text-yellow-400' 
-                                        : 'text-green-400'
-                                      }`}
-                                    >
-                                      {cls.currentBookings} / {cls.capacity}
-                                    </span>
-                                  </td>
-                                  <td className="py-3 px-4">
-                                    <Badge className={cls.enabled ? 'bg-primary/30' : 'bg-neutral-800 text-white/70'}>
-                                      {cls.enabled ? 'Active' : 'Inactive'}
-                                    </Badge>
-                                  </td>
-                                  <td className="py-3 px-4 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                      <Switch 
-                                        checked={cls.enabled} 
-                                        onCheckedChange={() => handleToggleClass(cls.id)} 
-                                        className="data-[state=checked]:bg-primary"
-                                      />
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => {
-                                          setClassToDelete(cls);
-                                          setIsDeleteDialogOpen(true);
-                                        }}
-                                        className="text-white/50 hover:text-white hover:bg-red-500/20"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </Card>
-        </div>
-          )}
-      </main>
-    </div>
-      
-      {/* Confirmation dialog for deleting class */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="bg-black/80 backdrop-blur-lg border-white/10 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-white">Delete Class</DialogTitle>
-            <DialogDescription className="text-white/70">
-              Are you sure you want to delete this class? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {classToDelete && (
-              <div className="p-4 border border-white/10 rounded-md bg-white/5">
-                <h4 className="font-medium text-white">{classToDelete.name}</h4>
-                <div className="flex flex-wrap items-center gap-y-2 gap-x-4 mt-2 text-sm text-white/70">
-                  <div className="flex items-center">
-                    <CalendarDays className="mr-1.5 h-4 w-4" />
-                    <span>{new Date(classToDelete.date).toLocaleDateString()}</span>
                   </div>
-                  <div className="flex items-center">
-                    <Clock className="mr-1.5 h-4 w-4" />
-                    <span>{classToDelete.time}</span>
+              </div>
+
+                {/* Footer Actions */}
+                <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 border-t border-white/10 p-8">
+                  <div className="flex justify-end gap-6">
+                    <AlertDialogCancel className="bg-white/10 hover:bg-white/20 border-white/30 text-white px-10 py-4 text-xl rounded-xl transition-all">
+                      Cancel
+                    </AlertDialogCancel>
+                    <Button 
+                      onClick={handleAddUserToClass} 
+                      disabled={!selectedUserId || availableUsers.length === 0}
+                      className="bg-primary hover:bg-primary/90 text-white px-10 py-4 text-xl rounded-xl disabled:opacity-50 transition-all"
+                    >
+                      <Plus className="h-6 w-6 mr-3" />
+                      {selectedClass?.enabled ? "Add User" : "Pre-add User"}
+                    </Button>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {filteredClasses.length === 0 && (
+          <div className="text-center py-12">
+            <CalendarDays className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">No classes found</h3>
+            <p className="text-gray-400">
+              {searchTerm ? 'Try adjusting your search terms.' : 'No classes have been created yet.'}
+            </p>
           </div>
-          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsDeleteDialogOpen(false)}
-              className="bg-transparent border border-white/20 text-white hover:bg-white/10"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => classToDelete && handleDeleteClass(classToDelete.id)}
-              disabled={isDeletingClass}
-              className="bg-red-600 text-white hover:bg-red-700 disabled:bg-red-600/50"
-            >
-              {isDeletingClass ? (
-                <span className="flex items-center gap-2">
-                  <div className="h-4 w-4 rounded-full border-2 border-white/20 border-r-transparent animate-spin"></div>
-                  Deleting...
-                </span>
-              ) : (
-                "Delete Class"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+        )}
+      </div>
+    </AdminLayout>
   );
 }
