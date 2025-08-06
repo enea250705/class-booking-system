@@ -120,6 +120,20 @@ export async function POST(
       },
     });
 
+    // Track the package assignment in PackageRenewal table
+    await prisma.packageRenewal.create({
+      data: {
+        userId: clientId,
+        packageId: newPackage.id,
+        packageType: packageType,
+        packageName: packageDetails[packageType].name,
+        startDate,
+        endDate,
+        price: 0, // Admin assigned packages are free
+        method: "admin_assigned",
+      },
+    });
+
     // Send email notification
     try {
       await sendEmail({

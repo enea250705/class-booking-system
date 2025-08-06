@@ -17,7 +17,8 @@ import {
   User,
   Check,
   AlertTriangle,
-  Clock
+  Clock,
+  XCircle
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/lib/auth"
@@ -120,6 +121,43 @@ export default function AdminPendingUsersPage() {
       toast({
         title: "Error",
         description: "Failed to approve user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle declining a user
+  const handleDeclineUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to decline this user? This action cannot be undone and will permanently delete their account.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/pending-users', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to decline user: ${response.status}`);
+      }
+      
+      // Remove the declined user from the list
+      setPendingUsers(pendingUsers.filter(user => user.id !== userId));
+      
+      toast({
+        title: "User Declined",
+        description: "User has been declined and their account deleted",
+        variant: "destructive",
+      });
+    } catch (error) {
+      console.error("Error declining user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to decline user",
         variant: "destructive",
       });
     }
@@ -245,6 +283,12 @@ export default function AdminPendingUsersPage() {
                               className="bg-primary hover:bg-primary/90 text-white"
                             >
                               <Check className="mr-2 h-4 w-4" /> Approve User
+                            </Button>
+                            <Button 
+                              onClick={() => handleDeclineUser(pendingUser.id)}
+                              className="bg-red-500 hover:bg-red-600 text-white"
+                            >
+                              <XCircle className="mr-2 h-4 w-4" /> Decline User
                             </Button>
                           </div>
                         </div>

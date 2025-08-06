@@ -67,7 +67,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST - Create a new package (purchase)
+// POST - Create a new package (purchase/renewal)
 export async function POST(request: Request) {
   try {
     const user = await auth(request);
@@ -83,9 +83,9 @@ export async function POST(request: Request) {
     console.log(`Creating package of type: ${packageType} for user: ${user.email}`);
     
     // Define package types
-    const packageTypes: Record<string, { name: string; totalClasses: number; days: number }> = {
-      "8": { name: "8 CrossFit Classes / Month", totalClasses: 8, days: 30 },
-      "12": { name: "12 CrossFit Classes / Month", totalClasses: 12, days: 30 }
+    const packageTypes: Record<string, { name: string; totalClasses: number; days: number; price: number }> = {
+      "8": { name: "8 CrossFit Classes / Month", totalClasses: 8, days: 30, price: 120 },
+      "12": { name: "12 CrossFit Classes / Month", totalClasses: 12, days: 30, price: 160 }
     };
     
     if (!packageType || !(packageType in packageTypes)) {
@@ -93,6 +93,41 @@ export async function POST(request: Request) {
         { error: "Invalid package type" },
         { status: 400 }
       );
+    }
+    
+    // Get the current active package if any
+    const currentPackage = await prisma.package.findFirst({
+      where: {
+        userId: user.id,
+        active: true,
+      },
+      orderBy: {
+        endDate: "desc",
+      },
+    });
+    
+    const packageDetails = packageTypes[packageType];
+    
+    // Calculate start and end dates
+    let startDate = new Date();
+    let endDate = new Date();
+    
+    // If user has an active package with remaining days, extend from current end date
+    if (currentPackage) {
+      const currentEndDate = new Date(currentPackage.endDate);
+      const now = new Date();
+      
+      if (currentEndDate > now) {
+        // Extend from current end date
+        startDate = currentEndDate;
+        endDate = new Date(startDate.getTime() + (packageDetails.days * 24 * 60 * 60 * 1000));
+      } else {
+        // Current package has expired, start from now
+        endDate.setDate(endDate.getDate() + packageDetails.days);
+      }
+    } else {
+      // No active package, start from now
+      endDate.setDate(endDate.getDate() + packageDetails.days);
     }
     
     // First, deactivate any existing active packages for this user
@@ -105,13 +140,6 @@ export async function POST(request: Request) {
         active: false,
       },
     });
-    
-    const packageDetails = packageTypes[packageType];
-    
-    // Calculate start and end dates
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + packageDetails.days);
     
     // Create the new package
     const newPackage = await prisma.package.create({
@@ -126,8 +154,26 @@ export async function POST(request: Request) {
       },
     });
     
+    // Track the renewal in PackageRenewal table
+    await prisma.packageRenewal.create({
+      data: {
+        userId: user.id,
+        packageId: newPackage.id,
+        packageType: packageType,
+        packageName: packageDetails.name,
+        startDate,
+        endDate,
+        price: packageDetails.price,
+        method: currentPackage ? "renewal" : "purchase",
+      },
+    });
+    
     // Calculate days remaining
-    const daysRemaining = packageDetails.days;
+    const now = new Date();
+    const daysRemaining = Math.max(
+      0,
+      Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    );
     
     console.log(`Successfully created package ${newPackage.id} for user ${user.email}`);
     
@@ -136,17 +182,18 @@ export async function POST(request: Request) {
       where: { id: newPackage.id }
     });
     
-    if (verifyPackage) {
-      console.log(`Verified new package is active: ${verifyPackage.active}`);
-    } else {
-      console.warn(`WARNING: Could not verify package ${newPackage.id}`);
+    if (!verifyPackage) {
+      throw new Error("Package verification failed after creation");
     }
+    
+    console.log(`Package verified successfully: ${verifyPackage.name} with ${verifyPackage.classesRemaining} classes`);
     
     return NextResponse.json({
       package: {
         ...newPackage,
         daysRemaining,
       },
+      message: currentPackage ? "Package renewed successfully" : "Package purchased successfully",
     }, {
       headers: {
         'Cache-Control': 'no-store, must-revalidate',
@@ -154,9 +201,9 @@ export async function POST(request: Request) {
       }
     });
   } catch (error) {
-    console.error("Error creating package:", error);
+    console.error("Error creating user package:", error);
     return NextResponse.json(
-      { error: "Failed to create package" },
+      { error: "Failed to create user package" },
       { status: 500 }
     );
   }

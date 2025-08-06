@@ -24,7 +24,12 @@ import {
   Mail,
   Tag,
   Calendar,
-  User
+  User,
+  Plus,
+  Edit,
+  Package,
+  Save,
+  RotateCcw
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
@@ -55,6 +60,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { AdminSidebar, MobileHeader, MobileMenu } from "../components/AdminLayout"
+import { Textarea } from '@/components/ui/textarea'
+import { toast } from 'sonner'
 
 // Remove the mockClients array
 // Instead define proper interfaces
@@ -76,6 +83,7 @@ interface Client {
   joinDate?: string;
   totalBookings?: number;
   nextClass?: string;
+  packages: ClientPackage[];
 }
 
 // Define LoadingIndicator component
@@ -306,6 +314,92 @@ export default function AdminClientsPage() {
     } else {
       setSortKey(key);
       setSortOrder("asc");
+    }
+  };
+
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
+  const [adjustmentData, setAdjustmentData] = useState({
+    newClassesRemaining: 0,
+    reason: ''
+  });
+
+  // Package assignment form
+  const [packageForm, setPackageForm] = useState({
+    packageType: '',
+    totalClasses: 8,
+    duration: 30
+  });
+
+  const handleAdjustClasses = async () => {
+    if (!selectedClient) return;
+
+    const activePackage = selectedClient.packages.find(pkg => pkg.active);
+    if (!activePackage) {
+      toast({
+        title: "Error",
+        description: "No active package found for this client",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/clients/${selectedClient.id}/adjust-classes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          packageId: activePackage.id,
+          newClassesRemaining: adjustmentData.newClassesRemaining,
+          reason: adjustmentData.reason
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Classes adjusted successfully",
+          variant: "default"
+        });
+        setIsAdjustDialogOpen(false);
+        fetchClients();
+        setAdjustmentData({ newClassesRemaining: 0, reason: '' });
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.error || "Failed to adjust classes",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error adjusting classes:', error);
+      toast({
+        title: "Error",
+        description: "Failed to adjust classes",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openAdjustDialog = (client: Client) => {
+    const activePackage = client.packages.find(pkg => pkg.active);
+    if (activePackage) {
+      setSelectedClient(client);
+      setAdjustmentData({
+        newClassesRemaining: activePackage.classesRemaining,
+        reason: ''
+      });
+      setIsAdjustDialogOpen(true);
+    } else {
+      toast({
+        title: "Error",
+        description: "No active package found for this client",
+        variant: "destructive"
+      });
     }
   };
 
@@ -841,6 +935,137 @@ export default function AdminClientsPage() {
               ) : (
                 "Send Reminder"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Package Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Package to {selectedClient?.name}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="packageType">Package Type</Label>
+              <Select
+                value={packageForm.packageType}
+                onValueChange={(value) => setPackageForm(prev => ({ ...prev, packageType: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select package type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="8-class">8-Class Package</SelectItem>
+                  <SelectItem value="12-class">12-Class Package</SelectItem>
+                  <SelectItem value="unlimited">Unlimited Package</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="totalClasses">Total Classes</Label>
+              <Input
+                id="totalClasses"
+                type="number"
+                value={packageForm.totalClasses}
+                onChange={(e) => setPackageForm(prev => ({ ...prev, totalClasses: parseInt(e.target.value) }))}
+                min="1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="duration">Duration (days)</Label>
+              <Input
+                id="duration"
+                type="number"
+                value={packageForm.duration}
+                onChange={(e) => setPackageForm(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
+                min="1"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => handleAssignPackage(selectedClient?.id || '', packageForm.packageType)}>
+              Assign Package
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Adjust Classes Dialog */}
+      <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adjust Classes for {selectedClient?.name}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {selectedClient && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Current Package Info:</h4>
+                {(() => {
+                  const activePackage = selectedClient.packages.find(pkg => pkg.active);
+                  return activePackage ? (
+                    <div className="text-sm space-y-1">
+                      <p><strong>Package:</strong> {activePackage.totalClasses}-Class Package</p>
+                      <p><strong>Current Remaining:</strong> {activePackage.classesRemaining} classes</p>
+                      <p><strong>Expires in:</strong> {activePackage.daysRemaining} days</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600">No active package found</p>
+                  );
+                })()}
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="newClassesRemaining">New Classes Remaining</Label>
+              <Input
+                id="newClassesRemaining"
+                type="number"
+                value={adjustmentData.newClassesRemaining}
+                onChange={(e) => setAdjustmentData(prev => ({ 
+                  ...prev, 
+                  newClassesRemaining: parseInt(e.target.value) || 0 
+                }))}
+                min="0"
+                placeholder="Enter new number of remaining classes"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="reason">Reason for Adjustment</Label>
+              <Textarea
+                id="reason"
+                value={adjustmentData.reason}
+                onChange={(e) => setAdjustmentData(prev => ({ ...prev, reason: e.target.value }))}
+                placeholder="Enter reason for this adjustment (optional)"
+                rows={3}
+              />
+            </div>
+
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Note:</strong> This will update the client's remaining classes immediately. 
+                The change will be reflected in their account right away.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAdjustDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAdjustClasses}>
+              <Save className="h-4 w-4 mr-1" />
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>

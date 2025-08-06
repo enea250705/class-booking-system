@@ -342,13 +342,22 @@ export default function AdminClassesPage() {
       
       const data = await response.json();
       
+      // Immediately remove deleted classes from frontend state
+      if (data.deletedClassIds && data.deletedClassIds.length > 0) {
+        setClasses(prevClasses => 
+          prevClasses.filter(cls => !data.deletedClassIds.includes(cls.id))
+        );
+        setFilteredClasses(prevFilteredClasses => 
+          prevFilteredClasses.filter(cls => !data.deletedClassIds.includes(cls.id))
+        );
+      }
+      
       toast({
         title: "Success",
-        description: `Successfully deleted ${data.deleted} past classes`,
+        description: data.deleted > 0 
+          ? `Successfully deleted ${data.deleted} past classes`
+          : "No past classes found to delete",
       });
-      
-      // Refresh classes
-      fetchClasses();
     } catch (error: any) {
       console.error('Error deleting past classes:', error);
       

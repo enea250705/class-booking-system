@@ -53,7 +53,12 @@ export async function GET(request: Request) {
         );
         
         packageInfo = {
-          ...activePackage,
+          id: activePackage.id,
+          name: activePackage.name,
+          classesRemaining: activePackage.classesRemaining,
+          totalClasses: activePackage.totalClasses,
+          endDate: activePackage.endDate,
+          active: activePackage.active,
           daysRemaining,
         };
       } else {

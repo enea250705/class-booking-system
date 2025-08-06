@@ -28,12 +28,6 @@ export function AdminSidebar({ user, pendingUsers }: { user: any, pendingUsers?:
       isActive: pathname === "/admin"
     },
     {
-      href: "/admin/classes",
-      icon: CalendarDays,
-      label: "Classes",
-      isActive: pathname.startsWith("/admin/classes")
-    },
-    {
       href: "/admin/clients",
       icon: Users,
       label: "Clients",
@@ -148,12 +142,6 @@ export function MobileMenu({ isOpen, onClose, user, pendingUsers }: { isOpen: bo
       icon: LayoutDashboard,
       label: "Dashboard",
       isActive: pathname === "/admin"
-    },
-    {
-      href: "/admin/classes",
-      icon: CalendarDays,
-      label: "Classes",
-      isActive: pathname.startsWith("/admin/classes")
     },
     {
       href: "/admin/clients",

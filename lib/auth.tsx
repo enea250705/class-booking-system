@@ -502,6 +502,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error('[DEBUG] Login error:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      // Re-throw the error so the calling component can handle it
+      throw err;
     } finally {
       setIsLoading(false);
     }

@@ -100,7 +100,8 @@ export async function POST(request: Request) {
     })
 
     // Send cancellation confirmation email
-    await sendEmail({
+    console.log('Attempting to send cancellation email to:', user.email);
+    const emailResult = await sendEmail({
       to: user.email,
       subject: "Your GymXam Class Booking Has Been Cancelled",
       text: `
@@ -131,7 +132,14 @@ The GymXam Team
   The GymXam Team</p>
 </div>
       `
-    })
+    });
+    
+    console.log('Cancellation email sending result:', emailResult);
+    
+    if (!emailResult.success) {
+      console.error('Failed to send cancellation email:', emailResult.error);
+      // Continue with cancellation success even if email fails
+    }
     
     // Return success response
     return NextResponse.json({ 

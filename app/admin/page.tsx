@@ -686,6 +686,10 @@ export default function AdminDashboardPage() {
 
   // Handle deleting past classes
   const handleDeletePastClasses = async () => {
+    if (!window.confirm("Are you sure you want to delete all past classes (older than 7 days)? This action cannot be undone!")) {
+      return;
+    }
+    
     try {
       setIsDeletingPastClasses(true);
       
@@ -700,13 +704,21 @@ export default function AdminDashboardPage() {
       
       const data = await response.json();
       
+      // Immediately remove deleted classes from frontend state
+      if (data.deletedClassIds && data.deletedClassIds.length > 0) {
+        setClasses(prevClasses => 
+          prevClasses.filter(cls => !data.deletedClassIds.includes(cls.id))
+        );
+      }
+      
       toast({
         title: "Success",
-        description: "Past classes have been deleted successfully",
+        description: data.deleted > 0 
+          ? `Successfully deleted ${data.deleted} past classes`
+          : "No past classes found to delete",
       });
       
-      // Refresh classes and status
-      fetchClasses();
+      // Refresh status (but classes are already updated in frontend)
       checkScheduleStatus();
     } catch (error: any) {
       console.error('Error deleting past classes:', error);

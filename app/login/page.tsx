@@ -92,6 +92,7 @@ export default function LoginPage() {
     
     try {
       await login(loginEmail, loginPassword)
+      // Success toast will only show if login doesn't throw an error
       toast({
         variant: "success",
         title: "Login successful",
@@ -99,6 +100,12 @@ export default function LoginPage() {
       })
     } catch (error) {
       console.error('Login error:', error)
+      // Show error toast for failed login
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "Invalid email or password"
+      })
     } finally {
       setIsLoading(false)
     }

@@ -76,7 +76,8 @@ export async function POST(request: Request) {
       message: `Successfully deleted ${result.count} past classes`,
       deleted: result.count,
       bookingsDeleted: deletedBookings.count,
-      waitlistDeleted: deletedWaitlist.count
+      waitlistDeleted: deletedWaitlist.count,
+      deletedClassIds: classIds
     });
     
   } catch (error) {

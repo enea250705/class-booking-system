@@ -165,73 +165,18 @@ function ClassCard({
       <CardFooter className="pt-1 pb-6 px-4 sm:px-6">
         {cls.isBooked === true ? (
           <div className="w-full">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  disabled={isCanceling}
-                  className="w-full bg-red-500/30 hover:bg-red-500/50 text-white border border-red-500/40 font-medium transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-lg py-6 text-base relative z-10"
-                  variant="outline"
-                  type="button"
-                >
-                  {isCanceling ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="h-4 w-4 border-2 border-current border-r-transparent rounded-full animate-spin"></div>
-                      Canceling...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <X className="h-5 w-5 text-red-300" />
-                      Cancel Booking
-                    </span>
-                  )}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="fixed inset-0 m-0 p-0 border-0 rounded-none sm:inset-auto sm:m-auto sm:rounded-lg sm:border sm:border-white/30 sm:w-[450px] sm:max-w-[95vw] bg-black/98 sm:bg-black/95 text-white flex flex-col h-full sm:h-auto overflow-hidden">
-                <div className="flex-1 overflow-auto px-4 py-5 sm:px-6">
-                  <AlertDialogHeader className="mb-4">
-                    <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <X className="h-6 w-6 text-red-400" />
-                    </div>
-                    <AlertDialogTitle className="text-xl sm:text-2xl text-center text-white mb-2">Cancel Booking</AlertDialogTitle>
-                    <AlertDialogDescription className="text-white/80 text-center">
-                      Are you sure you want to cancel your booking?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  
-                  <div className="mt-5 mb-6 p-4 bg-white/5 rounded-lg border border-white/10">
-                    <h3 className="font-medium text-white text-lg text-center">{cls.name}</h3>
-                    <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-4 text-white/70 text-sm">
-                      <div className="flex items-center bg-white/10 px-3 py-2 rounded-full">
-                        <CalendarDays className="mr-2 h-4 w-4 text-primary/80" />
-                        <span>{new Date(cls.date).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex items-center bg-white/10 px-3 py-2 rounded-full">
-                        <Clock className="mr-2 h-4 w-4 text-primary/80" />
-                        <span>{cls.time}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-3 bg-amber-900/30 border border-amber-500/30 rounded-md text-amber-200 text-sm text-center">
-                    A class credit will be returned to your account.
-                  </div>
-                </div>
-                
-                <div className="mt-auto border-t border-white/10 p-4 sm:p-5 bg-black/80">
-                  <div className="flex flex-col gap-3">
-                    <AlertDialogAction 
-                      onClick={handleCancelClick}
-                      className="bg-red-500/90 hover:bg-red-500 text-white border-none w-full py-3 rounded-md font-medium"
-                    >
-                      Confirm Cancellation
-                    </AlertDialogAction>
-                    <AlertDialogCancel className="bg-transparent border border-white/20 text-white hover:bg-white/10 w-full py-3 rounded-md">
-                      Keep My Booking
-                    </AlertDialogCancel>
-                  </div>
-                </div>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Link href="/membership/cancel">
+              <Button
+                className="w-full bg-red-500/30 hover:bg-red-500/50 text-white border border-red-500/40 font-medium transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-lg py-6 text-base relative z-10"
+                variant="outline"
+                type="button"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <X className="h-5 w-5 text-red-300" />
+                  Cancel Booking
+                </span>
+              </Button>
+            </Link>
             <div className="text-xs text-white/70 mt-3 text-center">
               * Cancellations must be made at least 8 hours before class
             </div>
@@ -350,6 +295,7 @@ const DashboardPage = () => {
       console.log('Fetching package data...');
       
       const response = await fetch('/api/packages/current', {
+        credentials: 'include',
         headers: {
           'Cache-Control': 'no-store, must-revalidate',
           'Pragma': 'no-cache'
@@ -389,6 +335,7 @@ const DashboardPage = () => {
       try {
         console.log('Trying fallback package endpoint...');
         const fallbackResponse = await fetch('/api/packages', {
+          credentials: 'include',
           headers: {
             'Cache-Control': 'no-store, must-revalidate',
             'Pragma': 'no-cache'
@@ -457,6 +404,8 @@ const DashboardPage = () => {
       
       // Fetch user bookings
       const bookingsResponse = await fetch('/api/bookings', {
+        method: 'GET',
+        credentials: 'include', // Include cookies for authentication
         headers: {
           'Cache-Control': 'no-store, must-revalidate',
           'Pragma': 'no-cache'
@@ -703,6 +652,7 @@ const DashboardPage = () => {
       // Book the class
       const response = await fetch('/api/bookings', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store, must-revalidate',
@@ -789,18 +739,8 @@ const DashboardPage = () => {
   // Handle purchasing/renewing packages
   const handlePurchasePackage = async (packageType: string) => {
     try {
-      // Check if user already has an active package with days remaining
-      if (userPackage && userPackage.daysRemaining > 0) {
-        toast({
-          title: "Active Membership",
-          description: "You already have an active membership. Please wait until it expires to purchase a new one.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
       setIsBooking(true);
-      console.log(`Purchasing package of type: ${packageType}`);
+      console.log(`Processing package of type: ${packageType}`);
       
       const response = await fetch('/api/packages', {
         method: 'POST',
@@ -814,21 +754,25 @@ const DashboardPage = () => {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to purchase package');
+        throw new Error(errorData.error || 'Failed to process package');
       }
       
       const data = await response.json();
-      console.log('Package purchase successful:', data);
+      console.log('Package processing successful:', data);
       
-      // Refresh user package data after purchase
+      // Refresh user package data after purchase/renewal
       setUserPackage(data.package);
       
       // Verify the package is in the state
       console.log('Updated user package state:', data.package.name);
       
+      const isRenewal = userPackage && userPackage.daysRemaining > 0;
+      
       toast({
-        title: "Package Purchased",
-        description: `You now have access to ${data.package.totalClasses} classes per month`,
+        title: isRenewal ? "Package Renewed" : "Package Purchased",
+        description: isRenewal 
+          ? `Your membership has been extended! Total ${data.package.totalClasses} classes available.`
+          : `You now have access to ${data.package.totalClasses} classes per month`,
         variant: "success"
       });
       
@@ -1283,69 +1227,11 @@ const DashboardPage = () => {
                   </div>
                         </CardContent>
                       <CardFooter className="bg-black/20 border-t border-white/10 p-6">
-                        {userPackage && userPackage.daysRemaining > 0 ? (
-                          <Button 
-                            className="w-full bg-white/20 text-white hover:bg-white/30 font-medium border border-white/10 cursor-not-allowed" 
-                            disabled={true}
-                          >
-                            <div className="flex flex-col items-center">
-                              <span>Membership Active</span>
-                              <span className="text-xs text-white/60 mt-1">Renew after expiration</span>
-                            </div>
+                        <Link href="/membership/manage">
+                          <Button className="w-full bg-white text-black hover:bg-white/90 font-medium">
+                            Manage Membership
                           </Button>
-                        ) : (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button 
-                                className="w-full bg-white text-black hover:bg-white/90 font-medium" 
-                              >
-                                Renew Membership
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="fixed inset-0 m-0 p-0 border-0 rounded-none sm:inset-auto sm:m-auto sm:rounded-lg sm:border sm:border-white/30 sm:w-[450px] sm:max-w-[95vw] bg-black/98 sm:bg-black/95 text-white flex flex-col h-full sm:h-auto overflow-hidden">
-                              <div className="flex-1 overflow-auto px-4 py-5 sm:px-6">
-                                <AlertDialogHeader className="mb-6">
-                                  <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <CalendarDays className="h-6 w-6 text-primary" />
-                                  </div>
-                                  <AlertDialogTitle className="text-xl sm:text-2xl text-center text-white mb-2">Choose Your Plan</AlertDialogTitle>
-                                  <AlertDialogDescription className="text-white/80 text-center">
-                                    Select how many classes you want in your monthly plan:
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                
-                                <div className="grid grid-cols-2 gap-4 my-6">
-                                  <Button 
-                                    className="h-auto py-6 flex flex-col items-center bg-primary/20 hover:bg-primary/30 border border-primary/30 text-white rounded-lg"
-                                    onClick={() => handlePurchasePackage('8')}
-                                  >
-                                    <span className="text-3xl font-bold mb-2">8</span>
-                                    <span className="text-sm mb-1">Classes / Month</span>
-                                    <span className="text-lg font-semibold text-white/90">€${packages.package8Price}</span>
-                                  </Button>
-                                  <Button 
-                                    className="h-auto py-6 flex flex-col items-center bg-primary/20 hover:bg-primary/30 border border-primary/30 text-white rounded-lg"
-                                    onClick={() => handlePurchasePackage('12')}
-                                  >
-                                    <span className="text-3xl font-bold mb-2">12</span>
-                                    <span className="text-sm mb-1">Classes / Month</span>
-                                    <span className="text-lg font-semibold text-white/90">€${packages.package12Price}</span>
-                                  </Button>
-                                </div>
-                                
-                                <div className="p-3 bg-blue-900/30 border border-blue-500/30 rounded-md text-blue-200 text-sm text-center">
-                                  Your plan will be active for 30 days from purchase
-                                </div>
-                              </div>
-                              
-                              <div className="mt-auto border-t border-white/10 p-4 sm:p-5 bg-black/80">
-                                <AlertDialogCancel className="bg-transparent border border-white/20 text-white hover:bg-white/10 w-full py-3 rounded-md">
-                                  Cancel
-                                </AlertDialogCancel>
-                              </div>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
+                        </Link>
                   </CardFooter>
                 </Card>
                     ) : (
@@ -1362,57 +1248,11 @@ const DashboardPage = () => {
                             <p className="text-white/70 max-w-xs mb-6">
                               Purchase a membership plan to start booking fitness classes
                             </p>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  className="bg-white text-black hover:bg-white/90 font-medium px-6" 
-                                >
-                                  Purchase Plan
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="fixed inset-0 m-0 p-0 border-0 rounded-none sm:inset-auto sm:m-auto sm:rounded-lg sm:border sm:border-white/30 sm:w-[450px] sm:max-w-[95vw] bg-black/98 sm:bg-black/95 text-white flex flex-col h-full sm:h-auto overflow-hidden">
-                                <div className="flex-1 overflow-auto px-4 py-5 sm:px-6">
-                                  <AlertDialogHeader className="mb-6">
-                                    <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                                      <CalendarDays className="h-6 w-6 text-primary" />
-                                    </div>
-                                    <AlertDialogTitle className="text-xl sm:text-2xl text-center text-white mb-2">Choose Your Plan</AlertDialogTitle>
-                                    <AlertDialogDescription className="text-white/80 text-center">
-                                      Select how many classes you want in your monthly plan:
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  
-                                  <div className="grid grid-cols-2 gap-4 my-6">
-                                    <Button 
-                                      className="h-auto py-6 flex flex-col items-center bg-primary/20 hover:bg-primary/30 border border-primary/30 text-white rounded-lg"
-                                      onClick={() => handlePurchasePackage('8')}
-                                    >
-                                      <span className="text-3xl font-bold mb-2">8</span>
-                                      <span className="text-sm mb-1">Classes / Month</span>
-                                      <span className="text-lg font-semibold text-white/90">€${packages.package8Price}</span>
-                                    </Button>
-                                    <Button 
-                                      className="h-auto py-6 flex flex-col items-center bg-primary/20 hover:bg-primary/30 border border-primary/30 text-white rounded-lg"
-                                      onClick={() => handlePurchasePackage('12')}
-                                    >
-                                      <span className="text-3xl font-bold mb-2">12</span>
-                                      <span className="text-sm mb-1">Classes / Month</span>
-                                      <span className="text-lg font-semibold text-white/90">€${packages.package12Price}</span>
-                                    </Button>
-                                  </div>
-                                  
-                                  <div className="p-3 bg-blue-900/30 border border-blue-500/30 rounded-md text-blue-200 text-sm text-center">
-                                    Your plan will be active for 30 days from purchase
-                                  </div>
-                                </div>
-                                
-                                <div className="mt-auto border-t border-white/10 p-4 sm:p-5 bg-black/80">
-                                  <AlertDialogCancel className="bg-transparent border border-white/20 text-white hover:bg-white/10 w-full py-3 rounded-md">
-                                    Cancel
-                                  </AlertDialogCancel>
-                                </div>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            <Link href="/membership/manage">
+                              <Button className="bg-white text-black hover:bg-white/90 font-medium px-6">
+                                Purchase Plan
+                              </Button>
+                            </Link>
                           </div>
                         </CardContent>
                       </Card>

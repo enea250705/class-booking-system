@@ -262,61 +262,18 @@ function BookedClassCard({ booking, onCancel, isLoading }: {
       </CardContent>
       
       <CardFooter className="pt-1 pb-6 flex flex-col gap-3">
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full bg-transparent border border-white/20 text-white hover:bg-red-500/20 hover:border-red-500/30 hover:text-white transition-colors"
-              size="sm"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-1.5">
-                  <div className="h-3 w-3 rounded-full border-2 border-current border-r-transparent animate-spin"></div>
-                  <span>Cancelling...</span>
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <X className="h-3.5 w-3.5" />
-                  Cancel Booking
-                </span>
-              )}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="bg-black/95 border-white/30 text-white max-w-[95%] w-[340px] sm:max-w-md rounded-lg shadow-xl p-5 sm:p-6 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0">
-            <AlertDialogHeader className="pb-3">
-              <AlertDialogTitle className="text-xl text-center text-white">Cancel Class Booking</AlertDialogTitle>
-              <AlertDialogDescription className="text-white/80 text-center mt-2">
-                Are you sure you want to cancel your booking for:
-                <div className="mt-4 mb-4 p-4 bg-white/10 rounded-lg border border-white/20">
-                  <h3 className="font-medium text-white text-base sm:text-lg">{booking.className}</h3>
-                  <div className="mt-3 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-white/70 text-sm">
-                    <div className="flex items-center">
-                      <CalendarDays className="mr-1.5 h-4 w-4 text-primary/80" />
-                      <span>{new Date(booking.date).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="mr-1.5 h-4 w-4 text-primary/80" />
-                      <span>{booking.time}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 p-3 sm:p-4 bg-amber-900/40 border border-amber-500/40 rounded-md text-amber-200 text-xs sm:text-sm">
-                  A class credit will be returned to your account.
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="flex flex-col sm:flex-row gap-3 sm:gap-2 mt-5">
-              <AlertDialogCancel className="bg-transparent border-white/30 text-white/90 hover:bg-white/10 hover:text-white sm:mr-2 order-2 sm:order-1 w-full sm:w-auto h-11">Keep Booking</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={() => onCancel(booking.id)}
-                className="bg-red-500/80 hover:bg-red-500 text-white border-none order-1 sm:order-2 w-full sm:w-auto h-11"
-              >
-                Confirm Cancellation
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Link href="/membership/cancel" className="w-full">
+          <Button
+            variant="outline"
+            className="w-full bg-transparent border border-white/20 text-white hover:bg-red-500/20 hover:border-red-500/30 hover:text-white transition-colors"
+            size="sm"
+          >
+            <span className="flex items-center justify-center gap-2">
+              <X className="h-3.5 w-3.5" />
+              Cancel Booking
+            </span>
+          </Button>
+        </Link>
         
         <Link href={`/classes/${booking.classId}`} className="w-full">
           <Button 

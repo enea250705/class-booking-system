@@ -71,9 +71,27 @@ export async function sendEmail(options: EmailOptions) {
     };
     
     console.log('Sending email with SMTP configuration');
+    console.log('Mail options:', {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      hasText: !!mailOptions.text,
+      hasHtml: !!mailOptions.html,
+    });
+    
+    // Test connection first
+    console.log('Testing SMTP connection...');
+    await transporter.verify();
+    console.log('SMTP connection verified successfully');
+    
     const info = await transporter.sendMail(mailOptions);
     
-    console.log('Email sent successfully:', info.messageId);
+    console.log('Email sent successfully:', {
+      messageId: info.messageId,
+      response: info.response,
+      accepted: info.accepted,
+      rejected: info.rejected,
+    });
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Failed to send email:', error);

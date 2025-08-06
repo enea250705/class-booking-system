@@ -219,7 +219,8 @@ export async function POST(request: Request) {
     });
     
     // Send booking confirmation email
-    await sendEmail({
+    console.log('Attempting to send booking confirmation email to:', user.email);
+    const emailResult = await sendEmail({
       to: user.email,
       subject: "Your GymXam Class Booking Confirmation",
       text: `Thank you for booking ${classInfo.name}!
@@ -250,6 +251,13 @@ Thank you for choosing GymXam!`,
         <p>Thank you for choosing GymXam!</p>
       `
     });
+    
+    console.log('Email sending result:', emailResult);
+    
+    if (!emailResult.success) {
+      console.error('Failed to send booking confirmation email:', emailResult.error);
+      // Continue with booking success even if email fails
+    }
 
     return NextResponse.json({
       message: "Booking created successfully",
