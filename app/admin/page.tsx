@@ -24,7 +24,16 @@ import {
   Calendar,
   User,
   RefreshCw,
-  Trash2
+  Trash2,
+  CheckCircleIcon,
+  XCircleIcon,
+  Edit3,
+  Check,
+  Package,
+  CreditCard,
+  Star,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
@@ -498,6 +507,43 @@ export default function AdminDashboardPage() {
       toast({
         title: "Error",
         description: "Failed to approve user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle declining a user
+  const handleDeclineUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to decline this user? This action cannot be undone and will permanently delete their account.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/pending-users', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to decline user: ${response.status}`);
+      }
+      
+      // Remove the declined user from the list
+      setPendingUsers(pendingUsers.filter(user => user.id !== userId));
+      
+      toast({
+        title: "User Declined",
+        description: "User has been declined and their account deleted",
+        variant: "destructive",
+      });
+    } catch (error) {
+      console.error("Error declining user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to decline user",
         variant: "destructive",
       });
     }
@@ -998,6 +1044,24 @@ export default function AdminDashboardPage() {
                     >
                       Debug Database
                     </Button>
+                    <Button
+                      onClick={handleDeletePastClasses}
+                      variant="outline"
+                      disabled={isDeletingPastClasses}
+                      className="bg-transparent border border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300 text-xs sm:text-sm"
+                    >
+                      {isDeletingPastClasses ? (
+                        <span className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full border-2 border-red-400/20 border-r-transparent animate-spin"></div>
+                          Deleting Past Classes...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <Trash2 className="h-3 w-3" />
+                          Delete Past Classes
+                        </span>
+                      )}
+                    </Button>
         </div>
                   
                   {isLoading ? (
@@ -1049,11 +1113,24 @@ export default function AdminDashboardPage() {
                                   <Badge variant={cls.enabled ? "outline" : "secondary"} className={cls.enabled ? "bg-primary/20 text-white border-primary/30" : "bg-muted/20 text-white/70 border-white/10"}>
                             {cls.enabled ? "Bookable" : "Not Bookable"}
                                   </Badge>
-                                  <Switch 
-                                    checked={cls.enabled} 
-                                    onCheckedChange={() => handleToggleClass(cls.id)} 
-                                    className="data-[state=checked]:bg-primary"
-                                  />
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant={cls.enabled ? "destructive" : "default"}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleClass(cls.id);
+                                      }}
+                                      className={cls.enabled ? "bg-red-600 hover:bg-red-700 text-xs px-2 py-1" : "bg-green-600 hover:bg-green-700 text-xs px-2 py-1"}
+                                    >
+                                      {cls.enabled ? "Disable" : "Enable"}
+                                    </Button>
+                                    <Switch 
+                                      checked={cls.enabled} 
+                                      onCheckedChange={() => handleToggleClass(cls.id)} 
+                                      className="data-[state=checked]:bg-primary"
+                                    />
+                                  </div>
                         </div>
                       </div>
                     </CardContent>
@@ -1090,8 +1167,8 @@ export default function AdminDashboardPage() {
                                       {dayGroup.classes.map((cls) => (
                                         <div 
                                           key={cls.id} 
-                                          className={`flex items-center justify-between bg-black/30 rounded p-2 text-sm ${cls.enabled ? 'hover:bg-primary/20 cursor-pointer' : 'opacity-70'}`}
-                                          onClick={() => cls.enabled && router.push(`/admin/classes/${cls.id}`)}
+                                          className={`flex items-center justify-between bg-black/30 rounded p-2 text-sm hover:bg-primary/20 cursor-pointer ${!cls.enabled ? 'opacity-70' : ''}`}
+                                          onClick={() => router.push(`/admin/classes/${cls.id}`)}
                                         >
                                           <span className="text-white">{cls.time}</span>
                                           <Badge variant={cls.enabled ? "outline" : "secondary"} className={cls.enabled ? "bg-primary/20 text-white border-primary/30 text-xs" : "bg-muted/20 text-white/70 border-white/10 text-xs"}>
