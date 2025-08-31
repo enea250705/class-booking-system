@@ -988,6 +988,9 @@ export default function AdminDashboardPage() {
                     <TabsTrigger value="schedule" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-md flex-1 min-w-[70px] text-xs sm:text-sm whitespace-nowrap">
                       Schedule
                     </TabsTrigger>
+                    <TabsTrigger value="users" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-md flex-1 min-w-[70px] text-xs sm:text-sm whitespace-nowrap">
+                      Users
+                    </TabsTrigger>
                   </TabsList>
                 </div>
 
@@ -1697,6 +1700,70 @@ export default function AdminDashboardPage() {
                   </CardContent>
               </Card>
             </TabsContent>
+
+                <TabsContent value="users" className="space-y-6 animate-in">
+                  <h2 className="text-2xl font-semibold tracking-tight text-white text-center">User Management</h2>
+                  <Card className="border-white/10 bg-black/40 backdrop-blur-md shadow-xl overflow-hidden">
+                    <CardHeader className="border-b border-white/10 bg-black/30">
+                      <CardTitle className="text-xl text-white">All Users</CardTitle>
+                      <CardDescription className="text-white/70">Delete users permanently. This action cannot be undone.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead>
+                            <tr className="bg-black/40 border-b border-white/10 text-white/70">
+                              <th className="text-left p-3">Name</th>
+                              <th className="text-left p-3">Email</th>
+                              <th className="text-left p-3">Package</th>
+                              <th className="text-left p-3">Remaining</th>
+                              <th className="text-right p-3">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {clients.length === 0 ? (
+                              <tr>
+                                <td colSpan={5} className="p-6 text-center text-white/70">No users found</td>
+                              </tr>
+                            ) : (
+                              clients.map((client) => (
+                                <tr key={client.id} className="border-b border-white/10 hover:bg-white/5">
+                                  <td className="p-3 text-white">{client.name}</td>
+                                  <td className="p-3 text-white/80">{client.email}</td>
+                                  <td className="p-3 text-white/80">{client.package?.name || 'None'}</td>
+                                  <td className="p-3 text-white/80">{client.package ? `${client.package.classesRemaining}/${client.package.totalClasses}` : '-'}</td>
+                                  <td className="p-3 text-right">
+                                    <Button
+                                      variant="outline"
+                                      className="bg-transparent border-red-500/30 text-red-400 hover:bg-red-950/30 hover:text-red-400 h-8 px-3"
+                                      onClick={async () => {
+                                        if (!confirm(`Are you sure you want to delete ${client.name || client.email}? This cannot be undone.`)) return;
+                                        try {
+                                          const resp = await fetch(`/api/admin/users/${client.id}`, { method: 'DELETE' });
+                                          if (!resp.ok) {
+                                            const err = await resp.json();
+                                            throw new Error(err.error || 'Failed to delete user');
+                                          }
+                                          // Optimistically remove from UI
+                                          setClients((prev) => prev.filter((c) => c.id !== client.id));
+                                          toast({ title: 'User deleted', description: `${client.name || client.email} was deleted` });
+                                        } catch (e: any) {
+                                          toast({ title: 'Error', description: e.message || 'Failed to delete user', variant: 'destructive' });
+                                        }
+                                      }}
+                                    >
+                                      Delete
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
           </Tabs>
         </div>
           )}
