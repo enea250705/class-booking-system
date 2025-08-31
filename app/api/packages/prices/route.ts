@@ -46,7 +46,10 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      prices: packagePrices
+      prices: {
+        ...packagePrices,
+        packageDuration: "30"
+      }
     });
   } catch (error) {
     console.error("Error fetching package prices:", error);
