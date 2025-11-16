@@ -100,6 +100,12 @@ export async function DELETE(
 
     // Start a transaction to ensure all operations succeed or fail together
     const result = await prisma.$transaction(async (tx) => {
+      // Get user info for notification
+      const bookingUser = await tx.user.findUnique({
+        where: { id: booking.userId },
+        select: { name: true, email: true }
+      })
+
       // Delete the booking
       const deletedBooking = await tx.booking.delete({
         where: { id: bookingId }
@@ -123,6 +129,32 @@ export async function DELETE(
           message: `Your booking for ${booking.class.name} on ${new Date(booking.class.date).toLocaleDateString()} at ${booking.class.time} has been cancelled.`
         }
       })
+
+      // Create admin notifications for cancellation
+      const formattedDate = new Date(booking.class.date).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      })
+      
+      const adminUsers = await tx.user.findMany({
+        where: { role: 'admin' },
+        select: { id: true }
+      })
+
+      // Create a notification for each admin
+      await Promise.all(
+        adminUsers.map((admin) =>
+          tx.notification.create({
+            data: {
+              userId: admin.id,
+              type: 'admin_cancellation',
+              message: `${bookingUser?.name || bookingUser?.email || 'A user'} cancelled ${booking.class.name} on ${formattedDate} at ${booking.class.time}`,
+              read: false
+            }
+          })
+        )
+      )
 
       // Check if there is anyone on the waitlist for this class
       const nextInWaitlist = await tx.waitlist.findFirst({

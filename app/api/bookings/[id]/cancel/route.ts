@@ -85,6 +85,32 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         })
       }
 
+      // Create admin notifications for cancellation
+      const formattedDate = new Date(booking.class.date).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      })
+      
+      const adminUsers = await tx.user.findMany({
+        where: { role: 'admin' },
+        select: { id: true }
+      })
+
+      // Create a notification for each admin
+      await Promise.all(
+        adminUsers.map((admin) =>
+          tx.notification.create({
+            data: {
+              userId: admin.id,
+              type: 'admin_cancellation',
+              message: `${booking.user.name || booking.user.email} cancelled ${booking.class.name} on ${formattedDate} at ${booking.class.time}`,
+              read: false
+            }
+          })
+        )
+      )
+
       return updatedBooking
     })
 

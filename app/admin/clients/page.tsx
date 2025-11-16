@@ -977,14 +977,8 @@ export default function AdminClientsPage() {
             </div>
 
             <div>
-              <Label htmlFor="duration">Duration (days)</Label>
-              <Input
-                id="duration"
-                type="number"
-                value={packageForm.duration}
-                onChange={(e) => setPackageForm(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
-                min="1"
-              />
+              <Label>Duration</Label>
+              <div className="text-sm text-white/80">30 days (fixed)</div>
             </div>
           </div>
 

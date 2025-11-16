@@ -10,14 +10,15 @@ import {
   Menu as MenuIcon, 
   X,
   User,
-  Settings
+  Settings,
+  Bell
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { LogoutButton } from "@/components/logout-button"
 
 // AdminSidebar component - exported for reuse across all admin pages
-export function AdminSidebar({ user, pendingUsers }: { user: any, pendingUsers?: any[] }) {
+export function AdminSidebar({ user, pendingUsers, unreadNotifications }: { user: any, pendingUsers?: any[], unreadNotifications?: number }) {
   const pathname = usePathname()
   
   const menuItems = [
@@ -32,6 +33,13 @@ export function AdminSidebar({ user, pendingUsers }: { user: any, pendingUsers?:
       icon: Users,
       label: "Clients",
       isActive: pathname.startsWith("/admin/clients")
+    },
+    {
+      href: "/admin/notifications",
+      icon: Bell,
+      label: "Notifications",
+      isActive: pathname.startsWith("/admin/notifications"),
+      badge: unreadNotifications && unreadNotifications > 0 ? unreadNotifications : null
     },
     {
       href: "/admin/pending-users",
@@ -133,7 +141,7 @@ export function MobileHeader({ user, setIsMobileMenuOpen }: { user: any, setIsMo
 }
 
 // MobileMenu component - exported for reuse across all admin pages
-export function MobileMenu({ isOpen, onClose, user, pendingUsers }: { isOpen: boolean, onClose: () => void, user: any, pendingUsers?: any[] }) {
+export function MobileMenu({ isOpen, onClose, user, pendingUsers, unreadNotifications }: { isOpen: boolean, onClose: () => void, user: any, pendingUsers?: any[], unreadNotifications?: number }) {
   const pathname = usePathname()
   
   const menuItems = [
@@ -148,6 +156,13 @@ export function MobileMenu({ isOpen, onClose, user, pendingUsers }: { isOpen: bo
       icon: Users,
       label: "Clients",
       isActive: pathname.startsWith("/admin/clients")
+    },
+    {
+      href: "/admin/notifications",
+      icon: Bell,
+      label: "Notifications",
+      isActive: pathname.startsWith("/admin/notifications"),
+      badge: unreadNotifications && unreadNotifications > 0 ? unreadNotifications : null
     },
     {
       href: "/admin/pending-users",
@@ -231,23 +246,26 @@ export function MobileMenu({ isOpen, onClose, user, pendingUsers }: { isOpen: bo
 export function AdminLayout({ 
   children, 
   user, 
-  pendingUsers = []
+  pendingUsers = [],
+  unreadNotifications = 0
 }: { 
   children: React.ReactNode, 
   user: any, 
-  pendingUsers?: any[] 
+  pendingUsers?: any[],
+  unreadNotifications?: number
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-black">
-      <AdminSidebar user={user} pendingUsers={pendingUsers} />
+      <AdminSidebar user={user} pendingUsers={pendingUsers} unreadNotifications={unreadNotifications} />
       <MobileHeader user={user} setIsMobileMenuOpen={setIsMobileMenuOpen} />
       <MobileMenu 
         isOpen={isMobileMenuOpen} 
         onClose={() => setIsMobileMenuOpen(false)} 
         user={user} 
         pendingUsers={pendingUsers}
+        unreadNotifications={unreadNotifications}
       />
       
       <div className="lg:ml-64">

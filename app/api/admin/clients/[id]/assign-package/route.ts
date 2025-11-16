@@ -86,12 +86,12 @@ export async function POST(
       basic: {
         name: "Basic Package: 8 Classes",
         totalClasses: 8,
-        durationDays: 60,
+        durationDays: 30,
       },
       premium: {
         name: "Premium Package: 12 Classes",
         totalClasses: 12,
-        durationDays: 90,
+        durationDays: 30,
       },
     };
 
