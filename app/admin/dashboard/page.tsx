@@ -9,6 +9,7 @@ import DashboardContent from "@/app/admin/components/DashboardContent"
 export default function AdminDashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [pendingUsers, setPendingUsers] = useState<any[]>([])
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
   const { user, isLoading } = useAuth()
   const router = useRouter()
 
@@ -26,8 +27,21 @@ export default function AdminDashboardPage() {
       }
     }
 
+    const fetchNotificationCount = async () => {
+      try {
+        const response = await fetch('/api/admin/notifications?unreadOnly=true')
+        if (response.ok) {
+          const data = await response.json()
+          setUnreadNotifications(data.unreadCount)
+        }
+      } catch (error) {
+        console.error('Error fetching notification count:', error)
+      }
+    }
+
     if (user?.role === 'admin') {
       fetchPendingUsers()
+      fetchNotificationCount()
     }
   }, [user])
 
@@ -52,13 +66,14 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      <AdminSidebar user={user} pendingUsers={pendingUsers} />
+      <AdminSidebar user={user} pendingUsers={pendingUsers} unreadNotifications={unreadNotifications} />
       <MobileHeader user={user} setIsMobileMenuOpen={setIsMobileMenuOpen} />
       <MobileMenu 
         isOpen={isMobileMenuOpen} 
         onClose={() => setIsMobileMenuOpen(false)} 
         user={user} 
         pendingUsers={pendingUsers}
+        unreadNotifications={unreadNotifications}
       />
       
       <div className="lg:ml-64">

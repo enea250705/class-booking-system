@@ -94,6 +94,7 @@ export default function AdminDashboardPage() {
   const [classes, setClasses] = useState<ClassItem[]>([])
   const [clients, setClients] = useState<ClientItem[]>([])
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([])
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [viewMode, setViewMode] = useState<'day' | 'week'>('week') // Default to week view
   const [scheduleStatus, setScheduleStatus] = useState<{
     isLoading: boolean;
@@ -138,6 +139,7 @@ export default function AdminDashboardPage() {
         fetchClasses(),
         fetchClients(),
         fetchPendingUsers(),
+        fetchNotificationCount(),
         checkScheduleStatus()
       ]).then(() => {
         setIsLoading(false);
@@ -228,6 +230,19 @@ export default function AdminDashboardPage() {
         description: "Failed to load pending users",
         variant: "destructive",
       });
+    }
+  };
+
+  // Fetch unread notifications count
+  const fetchNotificationCount = async () => {
+    try {
+      const response = await fetch('/api/admin/notifications?unreadOnly=true');
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadNotifications(data.unreadCount);
+      }
+    } catch (error) {
+      console.error('Error fetching notification count:', error);
     }
   };
 
@@ -953,13 +968,13 @@ export default function AdminDashboardPage() {
           </div>
         
         {/* Desktop sidebar */}
-        <AdminSidebar user={user} pendingUsers={pendingUsers} />
+        <AdminSidebar user={user} pendingUsers={pendingUsers} unreadNotifications={unreadNotifications} />
         
         {/* Mobile header */}
         <MobileHeader user={user} setIsMobileMenuOpen={setIsMobileMenuOpen} />
         
         {/* Mobile menu */}
-        <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} user={user} pendingUsers={pendingUsers} />
+        <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} user={user} pendingUsers={pendingUsers} unreadNotifications={unreadNotifications} />
 
         {/* Main content */}
         <main className="flex-1 container max-w-6xl mx-auto lg:pl-64 py-8 sm:py-12 px-4 relative z-10">
