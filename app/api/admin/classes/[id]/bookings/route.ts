@@ -3,9 +3,10 @@ import { auth } from "@/lib/auth-middleware"
 import { prisma } from "@/lib/prisma"
 
 // GET all bookings for a specific class (admin only)
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const classId = params.id;
+    const { id } = await params;
+    const classId = id;
     console.log(`Admin API: Raw class ID: "${classId}"`);
     
     const user = await auth(request)
