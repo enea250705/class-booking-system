@@ -1,6 +1,6 @@
 'use client'; // Vercel deployment trigger
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -78,6 +78,7 @@ export default function ManageMembershipPage() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const isProcessingRef = useRef(false);
 
   useEffect(() => {
     if (user) {
@@ -163,10 +164,13 @@ export default function ManageMembershipPage() {
       return;
     }
 
-    // Prevent multiple clicks - check if already purchasing this package
-    if (isPurchasing || purchasingPackageId === packageId) {
+    // Prevent multiple clicks using ref (synchronous check)
+    if (isProcessingRef.current || isPurchasing || purchasingPackageId === packageId) {
       return;
     }
+
+    // Set ref immediately (synchronous) to block any subsequent clicks
+    isProcessingRef.current = true;
 
     try {
       // Set purchasing state immediately to prevent multiple clicks
@@ -194,6 +198,7 @@ export default function ManageMembershipPage() {
       });
 
       // Redirect to dashboard immediately after successful purchase
+      // Don't reset ref here - let redirect happen
       setTimeout(() => {
         router.push('/dashboard');
       }, 500);
@@ -208,6 +213,7 @@ export default function ManageMembershipPage() {
       // Reset purchasing state on error so user can try again
       setIsPurchasing(false);
       setPurchasingPackageId(null);
+      isProcessingRef.current = false;
     }
   };
 
@@ -448,7 +454,7 @@ export default function ManageMembershipPage() {
                     ) : (
                       <Button
                         onClick={() => handlePurchasePackage(pkg.id)}
-                        disabled={isPurchasing}
+                        disabled={isPurchasing || isProcessingRef.current}
                         className={`w-full ${
                           pkg.popular 
                             ? 'bg-primary hover:bg-primary/90' 
