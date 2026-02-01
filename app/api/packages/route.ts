@@ -111,17 +111,17 @@ export async function POST(request: Request) {
       where: {
         userId: user.id,
         packageType: packageType,
-        createdAt: {
+        renewedAt: {
           gte: fiveSecondsAgo,
         },
       },
       orderBy: {
-        createdAt: "desc",
+        renewedAt: "desc",
       },
     });
 
     if (recentRenewal) {
-      console.log(`Duplicate renewal attempt blocked for user ${user.email} - renewal created ${Math.round((Date.now() - recentRenewal.createdAt.getTime()) / 1000)}s ago`);
+      console.log(`Duplicate renewal attempt blocked for user ${user.email} - renewal created ${Math.round((Date.now() - recentRenewal.renewedAt.getTime()) / 1000)}s ago`);
       return NextResponse.json(
         { error: "Please wait a moment before renewing again. Your package is being processed." },
         { status: 429 }
