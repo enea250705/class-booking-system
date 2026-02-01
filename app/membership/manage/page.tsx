@@ -76,6 +76,7 @@ export default function ManageMembershipPage() {
   const [bookingHistory, setBookingHistory] = useState<BookingHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
@@ -89,10 +90,18 @@ export default function ManageMembershipPage() {
       setIsLoading(true);
       
       // Fetch user package
-      const packageResponse = await fetch('/api/user-package');
+      const packageResponse = await fetch('/api/packages');
       if (packageResponse.ok) {
         const packageData = await packageResponse.json();
-        setUserPackage(packageData);
+        // Map endDate to expirationDate for compatibility
+        if (packageData.package) {
+          setUserPackage({
+            ...packageData.package,
+            expirationDate: packageData.package.endDate || packageData.package.expirationDate
+          });
+        } else {
+          setUserPackage(packageData);
+        }
       }
 
       // Fetch package options
@@ -154,8 +163,15 @@ export default function ManageMembershipPage() {
       return;
     }
 
+    // Prevent multiple clicks - check if already purchasing this package
+    if (isPurchasing || purchasingPackageId === packageId) {
+      return;
+    }
+
     try {
+      // Set purchasing state immediately to prevent multiple clicks
       setIsPurchasing(true);
+      setPurchasingPackageId(packageId);
       
       const response = await fetch('/api/packages', {
         method: 'POST',
@@ -177,8 +193,10 @@ export default function ManageMembershipPage() {
         variant: "default"
       });
 
-      // Refresh data
-      fetchData();
+      // Redirect to dashboard immediately after successful purchase
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 500);
       
     } catch (error) {
       console.error('Error purchasing package:', error);
@@ -187,8 +205,9 @@ export default function ManageMembershipPage() {
         description: error instanceof Error ? error.message : "Failed to purchase package",
         variant: "destructive"
       });
-    } finally {
+      // Reset purchasing state on error so user can try again
       setIsPurchasing(false);
+      setPurchasingPackageId(null);
     }
   };
 
@@ -410,25 +429,42 @@ export default function ManageMembershipPage() {
                       </div>
                     </div>
                   </CardContent>
-                  <CardFooter>
-                    <Button
-                      onClick={() => handlePurchasePackage(pkg.id)}
-                      disabled={isPurchasing}
-                      className={`w-full ${
-                        pkg.popular 
-                          ? 'bg-primary hover:bg-primary/90' 
-                          : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                      }`}
-                    >
-                      {isPurchasing ? (
-                        <span className="flex items-center gap-2">
-                          <div className="h-4 w-4 border-2 border-current border-r-transparent rounded-full animate-spin"></div>
-                          Purchasing...
-                        </span>
-                      ) : (
-                        userPackage && userPackage.active ? 'Renew Plan' : 'Choose Plan'
-                      )}
-                    </Button>
+                  <CardFooter className="flex flex-col gap-2">
+                    {userPackage && userPackage.active && userPackage.daysRemaining > 0 ? (
+                      <>
+                        <Button
+                          disabled={true}
+                          className="w-full bg-gray-600/50 text-gray-400 cursor-not-allowed border border-gray-600/50"
+                        >
+                          Active Membership
+                        </Button>
+                        <p className="text-xs text-white/60 text-center">
+                          You can renew after {userPackage.daysRemaining} {userPackage.daysRemaining === 1 ? 'day' : 'days'} 
+                          {(userPackage.expirationDate || (userPackage as any).endDate) && (
+                            <> (expires {new Date(userPackage.expirationDate || (userPackage as any).endDate).toLocaleDateString()})</>
+                          )}
+                        </p>
+                      </>
+                    ) : (
+                      <Button
+                        onClick={() => handlePurchasePackage(pkg.id)}
+                        disabled={isPurchasing}
+                        className={`w-full ${
+                          pkg.popular 
+                            ? 'bg-primary hover:bg-primary/90' 
+                            : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+                        }`}
+                      >
+                        {isPurchasing && purchasingPackageId === pkg.id ? (
+                          <span className="flex items-center gap-2">
+                            <div className="h-4 w-4 border-2 border-current border-r-transparent rounded-full animate-spin"></div>
+                            Purchasing...
+                          </span>
+                        ) : (
+                          userPackage && userPackage.active ? 'Renew Plan' : 'Choose Plan'
+                        )}
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               ))}

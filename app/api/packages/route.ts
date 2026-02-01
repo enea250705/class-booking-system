@@ -95,6 +95,29 @@ export async function POST(request: Request) {
       );
     }
     
+    // Prevent duplicate renewals: Check if a renewal was created in the last 5 seconds
+    const fiveSecondsAgo = new Date(Date.now() - 5000);
+    const recentRenewal = await prisma.packageRenewal.findFirst({
+      where: {
+        userId: user.id,
+        packageType: packageType,
+        createdAt: {
+          gte: fiveSecondsAgo,
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    if (recentRenewal) {
+      console.log(`Duplicate renewal attempt blocked for user ${user.email} - renewal created ${Math.round((Date.now() - recentRenewal.createdAt.getTime()) / 1000)}s ago`);
+      return NextResponse.json(
+        { error: "Please wait a moment before renewing again. Your package is being processed." },
+        { status: 429 }
+      );
+    }
+    
     // Get the current active package if any
     const currentPackage = await prisma.package.findFirst({
       where: {
@@ -105,19 +128,37 @@ export async function POST(request: Request) {
         endDate: "desc",
       },
     });
-    
+
+    // Prevent purchasing if user has an active membership with remaining days
+    if (currentPackage) {
+      const currentEndDate = new Date(currentPackage.endDate);
+      const now = new Date();
+      const daysRemaining = Math.ceil((currentEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysRemaining > 0) {
+        console.log(`Purchase blocked for user ${user.email} - active membership with ${daysRemaining} days remaining`);
+        return NextResponse.json(
+          { 
+            error: `You already have an active membership. Please wait until it expires (${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'} remaining). You can renew after ${new Date(currentEndDate).toLocaleDateString()}.` 
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const packageDetails = packageTypes[packageType];
-    
+
     // Calculate start and end dates
     let startDate = new Date();
     let endDate = new Date();
-    
-    // If user has an active package with remaining days, extend from current end date
+
+    // If user has an expired package, start from now
     if (currentPackage) {
       const currentEndDate = new Date(currentPackage.endDate);
       const now = new Date();
       
       if (currentEndDate > now) {
+        // This shouldn't happen due to the check above, but just in case
         // Extend from current end date
         startDate = currentEndDate;
         endDate = new Date(startDate.getTime() + (packageDetails.days * 24 * 60 * 60 * 1000));
