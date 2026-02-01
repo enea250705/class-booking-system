@@ -173,30 +173,39 @@ export async function POST(request: Request) {
     const packageDetails = packageTypes[packageType];
 
     // Calculate start and end dates
-    let startDate = new Date();
-    let endDate = new Date();
+    const now = new Date();
+    let startDate = new Date(now);
+    let endDate = new Date(now);
 
-    // If user has an expired package, start from now
+    // If user has a current package, determine how to extend it
     if (currentPackage) {
       const currentEndDate = new Date(currentPackage.endDate);
-      const now = new Date();
+      const daysRemaining = Math.ceil((currentEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      
+      console.log(`Renewal calculation for user ${user.email}:`);
+      console.log(`  Current end date: ${currentEndDate.toISOString()}`);
+      console.log(`  Current time: ${now.toISOString()}`);
+      console.log(`  Days remaining: ${daysRemaining}`);
+      console.log(`  Classes remaining: ${currentPackage.classesRemaining}`);
       
       if (currentEndDate > now) {
-        // This shouldn't happen due to the check above, but just in case
-        // Extend from current end date
-        startDate = currentEndDate;
+        // Package hasn't expired yet - extend from current end date
+        startDate = new Date(currentEndDate);
         endDate = new Date(startDate.getTime() + (packageDetails.days * 24 * 60 * 60 * 1000));
+        console.log(`  Extending from current end date: ${startDate.toISOString()} to ${endDate.toISOString()}`);
       } else {
-        // Current package has expired, start from now
-        endDate.setDate(endDate.getDate() + packageDetails.days);
+        // Package has expired (0 or negative days) - start fresh from now
+        endDate = new Date(now.getTime() + (packageDetails.days * 24 * 60 * 60 * 1000));
+        console.log(`  Package expired, starting fresh from now: ${startDate.toISOString()} to ${endDate.toISOString()}`);
       }
     } else {
       // No active package, start from now
-      endDate.setDate(endDate.getDate() + packageDetails.days);
+      endDate = new Date(now.getTime() + (packageDetails.days * 24 * 60 * 60 * 1000));
+      console.log(`  No existing package, starting from now: ${startDate.toISOString()} to ${endDate.toISOString()}`);
     }
     
     // First, deactivate any existing active packages for this user
-    await prisma.package.updateMany({
+    const deactivatedCount = await prisma.package.updateMany({
       where: {
         userId: user.id,
         active: true,
@@ -205,6 +214,8 @@ export async function POST(request: Request) {
         active: false,
       },
     });
+    
+    console.log(`Deactivated ${deactivatedCount.count} existing package(s) for user ${user.email}`);
     
     // Create the new package
     const newPackage = await prisma.package.create({
@@ -234,13 +245,18 @@ export async function POST(request: Request) {
     });
     
     // Calculate days remaining
-    const now = new Date();
+    const finalNow = new Date();
     const daysRemaining = Math.max(
       0,
-      Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      Math.ceil((endDate.getTime() - finalNow.getTime()) / (1000 * 60 * 60 * 24))
     );
     
     console.log(`Successfully created package ${newPackage.id} for user ${user.email}`);
+    console.log(`  Package name: ${newPackage.name}`);
+    console.log(`  Start date: ${newPackage.startDate.toISOString()}`);
+    console.log(`  End date: ${newPackage.endDate.toISOString()}`);
+    console.log(`  Classes: ${newPackage.classesRemaining}/${newPackage.totalClasses}`);
+    console.log(`  Days remaining: ${daysRemaining}`);
     
     // Verify the package was created correctly
     const verifyPackage = await prisma.package.findUnique({
@@ -251,7 +267,7 @@ export async function POST(request: Request) {
       throw new Error("Package verification failed after creation");
     }
     
-    console.log(`Package verified successfully: ${verifyPackage.name} with ${verifyPackage.classesRemaining} classes`);
+    console.log(`Package verified successfully: ${verifyPackage.name} with ${verifyPackage.classesRemaining} classes and ${daysRemaining} days remaining`);
     
     return NextResponse.json({
       package: {
