@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { redirect, useRouter } from "next/navigation";
+import { redirect, useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -504,9 +504,11 @@ function ClassDetailsContent({ classId }: { classId: string }) {
   );
 }
 
-export default function ClassDetailsPage({ params }: { params: { id: string } }) {
+export default function ClassDetailsPage() {
   // Background image selection for better visual appeal
   const bgImage = "/images/gymxam4.webp";
+  const params = useParams();
+  const classId = params.id as string;
   
   return (
     <>
@@ -533,7 +535,7 @@ export default function ClassDetailsPage({ params }: { params: { id: string } })
               <span>Back to Dashboard</span>
             </Link>
             
-            <ClassDetailsContent classId={params.id} />
+            <ClassDetailsContent classId={classId} />
           </div>
         </main>
       </div>
