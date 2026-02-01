@@ -218,31 +218,45 @@ export async function POST(request: Request) {
     console.log(`Deactivated ${deactivatedCount.count} existing package(s) for user ${user.email}`);
     
     // Create the new package
-    const newPackage = await prisma.package.create({
-      data: {
-        userId: user.id,
-        name: packageDetails.name,
-        totalClasses: packageDetails.totalClasses,
-        classesRemaining: packageDetails.totalClasses,
-        startDate,
-        endDate,
-        active: true,
-      },
-    });
+    let newPackage;
+    try {
+      newPackage = await prisma.package.create({
+        data: {
+          userId: user.id,
+          name: packageDetails.name,
+          totalClasses: packageDetails.totalClasses,
+          classesRemaining: packageDetails.totalClasses,
+          startDate,
+          endDate,
+          active: true,
+        },
+      });
+      console.log(`Package created successfully with ID: ${newPackage.id}`);
+    } catch (packageError) {
+      console.error("Error creating package:", packageError);
+      throw new Error(`Failed to create package: ${packageError instanceof Error ? packageError.message : String(packageError)}`);
+    }
     
     // Track the renewal in PackageRenewal table
-    await prisma.packageRenewal.create({
-      data: {
-        userId: user.id,
-        packageId: newPackage.id,
-        packageType: packageType,
-        packageName: packageDetails.name,
-        startDate,
-        endDate,
-        price: packageDetails.price,
-        method: currentPackage ? "renewal" : "purchase",
-      },
-    });
+    try {
+      await prisma.packageRenewal.create({
+        data: {
+          userId: user.id,
+          packageId: newPackage.id,
+          packageType: packageType,
+          packageName: packageDetails.name,
+          startDate,
+          endDate,
+          price: packageDetails.price,
+          method: currentPackage ? "renewal" : "purchase",
+        },
+      });
+      console.log(`PackageRenewal record created successfully for package ${newPackage.id}`);
+    } catch (renewalError) {
+      // Log the error but don't fail the whole operation if renewal tracking fails
+      console.error("Error creating PackageRenewal record (non-critical):", renewalError);
+      // Continue - the package was created successfully
+    }
     
     // Calculate days remaining
     const finalNow = new Date();
