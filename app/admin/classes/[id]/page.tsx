@@ -30,8 +30,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogoutButton } from "@/components/logout-button";
 import { format } from "date-fns";
-import { cookies } from 'next/headers';
-import jwt from 'jsonwebtoken';
 import { AdminSidebar } from "@/app/admin/components/AdminLayout";
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
