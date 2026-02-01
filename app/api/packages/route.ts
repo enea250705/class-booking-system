@@ -79,8 +79,18 @@ export async function POST(request: Request) {
       );
     }
     
-    const { packageType } = await request.json();
-    console.log(`Creating package of type: ${packageType} for user: ${user.email}`);
+    let packageType: string;
+    try {
+      const body = await request.json();
+      packageType = body.packageType;
+      console.log(`Creating package of type: ${packageType} for user: ${user.email}`);
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
+      return NextResponse.json(
+        { error: "Invalid request body", message: parseError instanceof Error ? parseError.message : String(parseError) },
+        { status: 400 }
+      );
+    }
     
     // Define package types
     const packageTypes: Record<string, { name: string; totalClasses: number; days: number; price: number }> = {
