@@ -106,6 +106,7 @@ export async function POST(request: Request) {
     }
     
     // Prevent duplicate renewals: Check if a renewal was created in the last 5 seconds
+    // This check works for both first-time purchases and renewals
     const fiveSecondsAgo = new Date(Date.now() - 5000);
     const recentRenewal = await prisma.packageRenewal.findFirst({
       where: {
@@ -121,9 +122,9 @@ export async function POST(request: Request) {
     });
 
     if (recentRenewal) {
-      console.log(`Duplicate renewal attempt blocked for user ${user.email} - renewal created ${Math.round((Date.now() - recentRenewal.renewedAt.getTime()) / 1000)}s ago`);
+      console.log(`Duplicate purchase/renewal attempt blocked for user ${user.email} - renewal created ${Math.round((Date.now() - recentRenewal.renewedAt.getTime()) / 1000)}s ago`);
       return NextResponse.json(
-        { error: "Please wait a moment before renewing again. Your package is being processed." },
+        { error: "Please wait a moment before purchasing again. Your package is being processed." },
         { status: 429 }
       );
     }
@@ -209,9 +210,11 @@ export async function POST(request: Request) {
         console.log(`  Package expired, starting fresh from now: ${startDate.toISOString()} to ${endDate.toISOString()}`);
       }
     } else {
-      // No active package, start from now
+      // No active package - this is a first-time purchase
+      // Start from now and add the package duration
       endDate = new Date(now.getTime() + (packageDetails.days * 24 * 60 * 60 * 1000));
-      console.log(`  No existing package, starting from now: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      console.log(`  First-time purchase for user ${user.email}, starting from now: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      console.log(`  Package will be valid for ${packageDetails.days} days with ${packageDetails.totalClasses} classes`);
     }
     
     // First, deactivate any existing active packages for this user
