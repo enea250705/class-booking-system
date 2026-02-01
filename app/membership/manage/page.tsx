@@ -436,7 +436,7 @@ export default function ManageMembershipPage() {
                     </div>
                   </CardContent>
                   <CardFooter className="flex flex-col gap-2">
-                    {userPackage && userPackage.active && userPackage.daysRemaining > 0 ? (
+                    {userPackage && userPackage.active && userPackage.daysRemaining > 0 && userPackage.classesRemaining > 0 ? (
                       <>
                         <Button
                           disabled={true}

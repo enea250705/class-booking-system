@@ -129,20 +129,35 @@ export async function POST(request: Request) {
       },
     });
 
-    // Prevent purchasing if user has an active membership with remaining days
+    // Prevent purchasing if user has an active membership with remaining days AND classes
+    // Allow renewal if:
+    // 1. Classes remaining is 0 (even if days remain)
+    // 2. Days remaining is 0 (membership expired, even if classes remain)
     if (currentPackage) {
       const currentEndDate = new Date(currentPackage.endDate);
       const now = new Date();
       const daysRemaining = Math.ceil((currentEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       
-      if (daysRemaining > 0) {
-        console.log(`Purchase blocked for user ${user.email} - active membership with ${daysRemaining} days remaining`);
+      // Only block if both days AND classes remain
+      // Allow renewal if days are 0 (expired) OR classes are 0 (exhausted)
+      if (daysRemaining > 0 && currentPackage.classesRemaining > 0) {
+        console.log(`Purchase blocked for user ${user.email} - active membership with ${daysRemaining} days and ${currentPackage.classesRemaining} classes remaining`);
         return NextResponse.json(
           { 
             error: `You already have an active membership. Please wait until it expires (${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'} remaining). You can renew after ${new Date(currentEndDate).toLocaleDateString()}.` 
           },
           { status: 400 }
         );
+      }
+      
+      // Allow renewal if classes are 0 (user has used all their classes)
+      if (daysRemaining > 0 && currentPackage.classesRemaining === 0) {
+        console.log(`Allowing renewal for user ${user.email} - 0 classes remaining but ${daysRemaining} days remaining`);
+      }
+      
+      // Allow renewal if days are 0 (membership expired)
+      if (daysRemaining <= 0) {
+        console.log(`Allowing renewal for user ${user.email} - membership expired (${daysRemaining} days remaining)`);
       }
     }
 
