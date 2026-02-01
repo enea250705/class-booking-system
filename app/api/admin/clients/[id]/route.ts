@@ -12,9 +12,10 @@ function calculateDaysRemaining(endDate: Date): number {
 }
 
 // GET client details (admin only)
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const userId = decodeURIComponent(params.id);
+    const { id } = await params;
+    const userId = decodeURIComponent(id);
     console.log(`Admin API: Fetching client with ID: "${userId}"`);
     
     const user = await auth(request);

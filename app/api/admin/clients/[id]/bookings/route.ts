@@ -3,9 +3,10 @@ import { auth } from "@/lib/auth-middleware"
 import { prisma } from "@/lib/prisma"
 
 // GET all bookings for a specific client (admin only)
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const userId = decodeURIComponent(params.id);
+    const { id } = await params;
+    const userId = decodeURIComponent(id);
     console.log(`Admin API: Fetching bookings for user ID: "${userId}"`);
     
     const user = await auth(request)
