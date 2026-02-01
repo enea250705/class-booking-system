@@ -197,10 +197,15 @@ export default function ManageMembershipPage() {
         variant: "default"
       });
 
-      // Redirect to dashboard immediately after successful purchase
-      // Don't reset ref here - let redirect happen
+      // Refresh data immediately after successful purchase
+      await fetchData();
+      
+      // Force Next.js to refresh server components
+      router.refresh();
+
+      // Redirect to dashboard with timestamp to force refresh
       setTimeout(() => {
-        router.push('/dashboard');
+        router.push(`/dashboard?refresh=${Date.now()}`);
       }, 500);
       
     } catch (error) {

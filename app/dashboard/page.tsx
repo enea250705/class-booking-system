@@ -22,7 +22,7 @@ import {
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/lib/auth"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { LogoutButton } from "@/components/logout-button"
 import { useToast } from "@/components/ui/use-toast"
 import Image from "next/image"
@@ -222,6 +222,7 @@ function ClassCard({
 const DashboardPage = () => {
   const { user, isLoading: authLoading, refreshSession } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [classes, setClasses] = useState<ClassPreview[]>([]);
   const [filteredClasses, setFilteredClasses] = useState<ClassPreview[]>([]);
   const [userPackage, setUserPackage] = useState<PackageInfo | null>(null);
@@ -288,6 +289,18 @@ const DashboardPage = () => {
       fetchData();
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Refetch data when refresh query parameter is present (e.g., after purchase)
+  useEffect(() => {
+    const refreshParam = searchParams.get('refresh');
+    if (refreshParam && user) {
+      console.log("Refresh parameter detected, refetching all data...");
+      fetchData();
+      fetchPackageData();
+      // Remove the query parameter from URL
+      router.replace('/dashboard', { scroll: false });
+    }
+  }, [searchParams, user, router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Add function to fetch package data
   const fetchPackageData = async () => {
@@ -1358,4 +1371,11 @@ const DashboardPage = () => {
   );
 }
 
-export default DashboardPage;
+// Wrap DashboardPage in Suspense for useSearchParams
+export default function DashboardPageWrapper() {
+  return (
+    <Suspense fallback={<LoadingIndicator />}>
+      <DashboardPage />
+    </Suspense>
+  );
+}
