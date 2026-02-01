@@ -283,8 +283,18 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Error creating user package:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error("Error details:", {
+      message: errorMessage,
+      stack: errorStack,
+      error: error
+    });
     return NextResponse.json(
-      { error: "Failed to create user package" },
+      { 
+        error: "Failed to create user package",
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }
