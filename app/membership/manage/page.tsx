@@ -188,7 +188,15 @@ export default function ManageMembershipPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to purchase package');
+        // Include more details from the error response
+        const errorMsg = data.message || data.error || 'Failed to purchase package';
+        console.error('Package purchase error:', {
+          status: response.status,
+          error: data.error,
+          message: data.message,
+          details: data
+        });
+        throw new Error(errorMsg);
       }
 
       toast({

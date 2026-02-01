@@ -304,10 +304,13 @@ export async function POST(request: Request) {
       stack: errorStack,
       error: error
     });
+    
+    // Always return error details to help with debugging
     return NextResponse.json(
       { 
         error: "Failed to create user package",
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        message: errorMessage,
+        ...(process.env.NODE_ENV === 'development' && { stack: errorStack })
       },
       { status: 500 }
     );
