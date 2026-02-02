@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await auth(request);
@@ -16,7 +16,7 @@ export async function POST(
     }
 
     const { bookingId } = await request.json();
-    const classId = params.id;
+    const { id: classId } = await params;
 
     // Get the booking details
     const booking = await prisma.booking.findUnique({

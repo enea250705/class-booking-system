@@ -124,6 +124,7 @@ export default function AdminClassesPage() {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState("")
   const [userSearchTerm, setUserSearchTerm] = useState('')
+  const [forceAddWithoutPackage, setForceAddWithoutPackage] = useState(false)
   const [selectedClass, setSelectedClass] = useState<Class | null>(null)
   const { user, logout } = useAuth()
   const router = useRouter()
@@ -504,6 +505,7 @@ export default function AdminClassesPage() {
     setSelectedClass(classItem);
     setSelectedUserId('');
     setUserSearchTerm('');
+    setForceAddWithoutPackage(false);
     setIsAddUserOpen(true);
   };
 
@@ -852,6 +854,20 @@ export default function AdminClassesPage() {
                     <div className="space-y-6">
                       <h3 className="text-2xl font-bold text-white">Select User to Add</h3>
                       
+                      {/* Add without package option */}
+                      <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                        <input
+                          type="checkbox"
+                          id="force-add-checkbox"
+                          checked={forceAddWithoutPackage}
+                          onChange={(e) => setForceAddWithoutPackage(e.target.checked)}
+                          className="h-5 w-5 rounded border-white/30 bg-white/10 text-primary focus:ring-primary"
+                        />
+                        <label htmlFor="force-add-checkbox" className="text-white cursor-pointer">
+                          Add without package requirement (pre-add / admin override)
+                        </label>
+                      </div>
+
                       {/* Search Bar */}
                 <div className="relative">
                         <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 text-white/50 h-6 w-6" />

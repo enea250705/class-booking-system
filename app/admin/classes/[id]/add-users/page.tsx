@@ -58,6 +58,7 @@ export default function AddUsersToClassPage() {
   const [addingUsers, setAddingUsers] = useState<Set<string>>(new Set())
   const [sendingNotifications, setSendingNotifications] = useState<Set<string>>(new Set())
   const [sendEmailImmediately, setSendEmailImmediately] = useState(true)
+  const [forceAddWithoutPackage, setForceAddWithoutPackage] = useState(false)
 
   useEffect(() => {
     fetchClassDetails()
@@ -122,7 +123,8 @@ export default function AddUsersToClassPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           userId,
-          sendEmailImmediately: classDetails?.enabled ? sendEmailImmediately : false
+          sendEmailImmediately: classDetails?.enabled ? sendEmailImmediately : false,
+          forceAdd: forceAddWithoutPackage
         })
       })
 
@@ -154,7 +156,7 @@ export default function AddUsersToClassPage() {
         }
       } else {
         const error = await response.json()
-        toast.error(error.message || 'Failed to add user to class')
+        toast.error(error.error || error.message || 'Failed to add user to class')
       }
     } catch (error) {
       console.error('Error adding user:', error)
@@ -306,30 +308,46 @@ export default function AddUsersToClassPage() {
           </Card>
         )}
 
-        {/* Email Notification Settings */}
+        {/* Admin Options */}
         <Card className="bg-gray-800/50 border-white/10 mb-6">
           <CardHeader>
             <CardTitle className="text-white flex items-center space-x-2">
-              <Mail className="h-5 w-5" />
-              <span>Email Notification Settings</span>
+              <UserPlus className="h-5 w-5" />
+              <span>Add User Options</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="send-email-immediately"
-                checked={sendEmailImmediately}
-                onCheckedChange={setSendEmailImmediately}
-              />
-              <Label htmlFor="send-email-immediately" className="text-white">
-                Send email notifications immediately when adding users
-              </Label>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="force-add-without-package"
+                  checked={forceAddWithoutPackage}
+                  onCheckedChange={setForceAddWithoutPackage}
+                />
+                <Label htmlFor="force-add-without-package" className="text-white">
+                  Add without package requirement (pre-add / admin override)
+                </Label>
+              </div>
+              <p className="text-white/60 text-sm">
+                When enabled, you can add any user even if they don&apos;t have an active package or remaining classes.
+              </p>
+              <Separator className="bg-white/10" />
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="send-email-immediately"
+                  checked={sendEmailImmediately}
+                  onCheckedChange={setSendEmailImmediately}
+                />
+                <Label htmlFor="send-email-immediately" className="text-white">
+                  Send email notifications immediately when adding users
+                </Label>
+              </div>
+              <p className="text-white/60 text-sm">
+                {classDetails?.enabled 
+                  ? 'When enabled, users will receive booking confirmation emails immediately.'
+                  : 'When enabled, users will receive pre-booking notification emails immediately.'}
+              </p>
             </div>
-            <p className="text-white/60 text-sm mt-2">
-              {classDetails?.enabled 
-                ? 'When enabled, users will receive booking confirmation emails immediately.'
-                : 'When enabled, users will receive pre-booking notification emails immediately.'}
-            </p>
           </CardContent>
         </Card>
 

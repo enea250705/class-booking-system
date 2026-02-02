@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await auth(request);
@@ -15,8 +15,8 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { userId, sendEmailImmediately = false } = await request.json();
-    const classId = params.id;
+    const { userId, sendEmailImmediately = false, forceAdd = false } = await request.json();
+    const { id: classId } = await params;
 
     // Check if class exists and get its details
     const classItem = await prisma.class.findUnique({
@@ -49,10 +49,14 @@ export async function POST(
 
     // For enabled classes, check if user has an active package with remaining classes
     // For disabled classes, we allow pre-adding without package validation
+    // forceAdd (admin override): skip package check and allow adding anyone
     let userPackage = null;
     let bookingStatus = 'confirmed';
 
-    if (classItem.enabled) {
+    if (forceAdd) {
+      // Admin override: add user without package requirement (pre-add style)
+      bookingStatus = 'pre_added';
+    } else if (classItem.enabled) {
       // Class is enabled - require active package with remaining classes
       userPackage = await prisma.package.findFirst({
         where: {
@@ -66,19 +70,17 @@ export async function POST(
 
       if (!userPackage) {
         return NextResponse.json({ 
-          error: 'User does not have an active package with remaining classes' 
+          error: 'User does not have an active package with remaining classes. Use "Add without package" to pre-add them.' 
         }, { status: 400 });
       }
     } else {
-      // Class is disabled - allow pre-adding, but check if user has any package
+      // Class is disabled - allow pre-adding (no package required)
       userPackage = await prisma.package.findFirst({
         where: {
           userId: userId,
           active: true
         }
       });
-
-      // Set status to 'pre_added' for disabled classes
       bookingStatus = 'pre_added';
     }
 

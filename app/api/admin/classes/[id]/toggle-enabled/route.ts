@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await auth(request);
@@ -28,7 +28,7 @@ export async function POST(
     }
 
     const { enabled } = await request.json();
-    const classId = params.id;
+    const { id: classId } = await params;
 
     // Get class details with bookings
     const classItem = await prisma.class.findUnique({
