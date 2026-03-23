@@ -45,21 +45,26 @@ export async function POST(request: Request) {
     
     // Generate classes for each day in the year
     const classes = [];
-    let currentDate = new Date(startDate);
-    
+    // Use UTC timestamp arithmetic so DST transitions never skew the date by 1 day
+    let currentTimestamp = startDate.getTime();
+    const endTimestamp = endDate.getTime();
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
     // Loop through dates until we reach the end date
-    while (currentDate < endDate) {
-      const dayOfWeek = DAYS[currentDate.getDay()];
-      
+    while (currentTimestamp < endTimestamp) {
+      const currentDate = new Date(currentTimestamp);
+      // Use UTC day-of-week so DST hour offsets don't affect which day we think it is
+      const dayOfWeek = DAYS[currentDate.getUTCDay()];
+
       // Only create classes for weekdays (Monday to Friday)
       if (dayOfWeek !== "Saturday" && dayOfWeek !== "Sunday") {
         const timeSlots = TIME_SLOTS[dayOfWeek as Weekday];
-        
+
         // Create a class for each time slot on this day
         for (const timeSlot of timeSlots) {
           const [hours, minutes] = timeSlot.split(':');
           const formattedTime = `${parseInt(hours, 10)}:${minutes} ${parseInt(hours, 10) >= 12 ? 'PM' : 'AM'}`;
-          
+
           classes.push({
             name: className,
             day: dayOfWeek,
@@ -71,9 +76,9 @@ export async function POST(request: Request) {
           });
         }
       }
-      
-      // Move to the next day
-      currentDate.setDate(currentDate.getDate() + 1);
+
+      // Advance by exactly one UTC day – immune to DST spring-forward/fall-back
+      currentTimestamp += ONE_DAY_MS;
     }
     
     // Batch create classes in the database
