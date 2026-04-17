@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth-middleware"
 import { prisma } from "@/lib/prisma"
 import { sendEmail } from "@/lib/email"
+import { bookingCancelledEmail } from "@/lib/email-templates"
 
 // POST - Cancel a booking by class ID
 export async function POST(request: Request) {
@@ -129,35 +130,13 @@ export async function POST(request: Request) {
     console.log('Attempting to send cancellation email to:', user.email);
     const emailResult = await sendEmail({
       to: user.email,
-      subject: "Your GymXam Class Booking Has Been Cancelled",
-      text: `
-Dear ${user.name},
-
-Your booking for ${booking.class.name} on ${formattedDate} at ${booking.class.time} has been successfully cancelled.
-
-A class credit has been returned to your account.
-
-Thank you for using GymXam!
-
-Best regards,
-The GymXam Team
-      `,
-      html: `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <h2>Class Booking Cancelled</h2>
-  
-  <p>Dear ${user.name},</p>
-  
-  <p>Your booking for <strong>${booking.class.name}</strong> on ${formattedDate} at ${booking.class.time} has been successfully cancelled.</p>
-  
-  <p>A class credit has been returned to your account.</p>
-  
-  <p>Thank you for using GymXam!</p>
-  
-  <p>Best regards,<br>
-  The GymXam Team</p>
-</div>
-      `
+      subject: `Booking Cancelled — ${booking.class.name}`,
+      html: bookingCancelledEmail({
+        name: user.name,
+        className: booking.class.name,
+        date: formattedDate,
+        time: booking.class.time,
+      }),
     });
     
     console.log('Cancellation email sending result:', emailResult);

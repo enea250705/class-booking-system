@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth-middleware";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { packageExpiringEmail } from "@/lib/email-templates";
 
 // Function to calculate days remaining
 function calculateDaysRemaining(endDate: Date): number {
@@ -76,42 +77,14 @@ export async function POST(
     try {
       await sendEmail({
         to: client.email,
-        subject: "Your Membership Package is Expiring Soon",
-        text: `
-          Hello ${client.name},
-
-          This is a friendly reminder that your membership package is expiring soon:
-
-          Package: ${activePackage.name}
-          Classes Remaining: ${activePackage.classesRemaining} of ${activePackage.totalClasses}
-          Days Remaining: ${daysRemaining}
-          Expiration Date: ${activePackage.endDate.toLocaleDateString()}
-
-          To continue enjoying our fitness classes, please consider renewing your membership before it expires.
-          You can renew your membership by visiting our website or speaking with our staff.
-
-          Thank you for being a valued member of GymXam.
-
-          Best regards,
-          The GymXam Team
-        `,
-        html: `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-            <h2>Your Membership Package is Expiring Soon</h2>
-            <p>Hello ${client.name},</p>
-            <p>This is a friendly reminder that your membership package is expiring soon:</p>
-            <div style="background-color: #f7f7f7; padding: 15px; border-radius: 5px; margin: 15px 0;">
-              <p><strong>Package:</strong> ${activePackage.name}</p>
-              <p><strong>Classes Remaining:</strong> ${activePackage.classesRemaining} of ${activePackage.totalClasses}</p>
-              <p><strong>Days Remaining:</strong> ${daysRemaining}</p>
-              <p><strong>Expiration Date:</strong> ${activePackage.endDate.toLocaleDateString()}</p>
-            </div>
-            <p>To continue enjoying our fitness classes, please consider renewing your membership before it expires.</p>
-            <p>You can renew your membership by visiting our website or speaking with our staff.</p>
-            <p>Thank you for being a valued member of GymXam.</p>
-            <p>Best regards,<br>The GymXam Team</p>
-          </div>
-        `,
+        subject: "Your GymXam Membership is Expiring Soon",
+        html: packageExpiringEmail({
+          name: client.name,
+          packageName: activePackage.name,
+          classesRemaining: activePackage.classesRemaining,
+          daysRemaining,
+          expirationDate: activePackage.endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        }),
       });
     } catch (emailError) {
       console.error("Error sending reminder email:", emailError);

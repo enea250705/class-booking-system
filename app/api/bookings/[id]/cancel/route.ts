@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth-middleware"
 import { prisma } from "@/lib/prisma"
 import { sendEmail } from "@/lib/email"
+import { bookingCancelledEmail } from "@/lib/email-templates"
 
 // PUT cancel a booking
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
@@ -125,35 +126,13 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     // Send cancellation confirmation email
     await sendEmail({
       to: booking.user.email,
-      subject: "Your GymXam Class Booking Has Been Cancelled",
-      text: `
-Dear ${booking.user.name},
-
-Your booking for ${booking.class.name} on ${formattedDate} at ${booking.class.time} has been successfully cancelled.
-
-A class credit has been returned to your account.
-
-Thank you for using GymXam!
-
-Best regards,
-The GymXam Team
-      `,
-      html: `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <h2>Class Booking Cancelled</h2>
-  
-  <p>Dear ${booking.user.name},</p>
-  
-  <p>Your booking for <strong>${booking.class.name}</strong> on ${formattedDate} at ${booking.class.time} has been successfully cancelled.</p>
-  
-  <p>A class credit has been returned to your account.</p>
-  
-  <p>Thank you for using GymXam!</p>
-  
-  <p>Best regards,<br>
-  The GymXam Team</p>
-</div>
-      `
+      subject: `Booking Cancelled — ${booking.class.name}`,
+      html: bookingCancelledEmail({
+        name: booking.user.name,
+        className: booking.class.name,
+        date: formattedDate,
+        time: booking.class.time,
+      }),
     })
 
     return NextResponse.json({ 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth-middleware"
 import { prisma } from "@/lib/prisma"
 import { sendEmail } from "@/lib/email"
+import { accountApprovedEmail, accountDeclinedEmail } from "@/lib/email-templates"
 
 // GET all pending users for admin approval
 export async function GET(request: Request) {
@@ -79,14 +80,8 @@ export async function POST(request: Request) {
     try {
       await sendEmail({
         to: userToApprove.email,
-        subject: "Your Account Has Been Approved",
-        text: `Hello ${userToApprove.name},\n\nYour account has been approved. You can now log in and book classes.\n\nThank you for joining us!`,
-        html: `
-          <h1>Your Account Has Been Approved</h1>
-          <p>Hello ${userToApprove.name},</p>
-          <p>Your account has been approved. You can now log in and book classes.</p>
-          <p>Thank you for joining us!</p>
-        `,
+        subject: "Welcome to GymXam — Account Approved",
+        html: accountApprovedEmail({ name: userToApprove.name }),
       })
     } catch (emailError) {
       console.error("Failed to send approval email:", emailError)
@@ -146,15 +141,8 @@ export async function DELETE(request: Request) {
     try {
       await sendEmail({
         to: userToDecline.email,
-        subject: "Registration Application Update",
-        text: `Hello ${userToDecline.name},\n\nThank you for your interest in our CrossFit classes. Unfortunately, we are unable to approve your registration at this time.\n\nIf you have any questions, please feel free to contact us.\n\nBest regards,\nThe CrossFit Team`,
-        html: `
-          <h1>Registration Application Update</h1>
-          <p>Hello ${userToDecline.name},</p>
-          <p>Thank you for your interest in our CrossFit classes. Unfortunately, we are unable to approve your registration at this time.</p>
-          <p>If you have any questions, please feel free to contact us.</p>
-          <p>Best regards,<br>The CrossFit Team</p>
-        `,
+        subject: "GymXam — Registration Update",
+        html: accountDeclinedEmail({ name: userToDecline.name }),
       })
     } catch (emailError) {
       console.error("Failed to send decline email:", emailError)

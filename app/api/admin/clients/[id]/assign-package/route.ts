@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth-middleware";
 import prisma from "@/lib/prisma";
 import { addDays } from "date-fns";
 import { sendEmail } from "@/lib/email";
+import { packageAssignedEmail } from "@/lib/email-templates";
 
 // Define valid package types
 type PackageType = 'starter' | 'basic' | 'premium';
@@ -138,38 +139,13 @@ export async function POST(
     try {
       await sendEmail({
         to: client.email,
-        subject: "New Membership Package Assigned",
-        text: `
-          Hello ${client.name},
-
-          We're excited to inform you that a new membership package has been assigned to your account:
-
-          Package: ${packageDetails[packageType].name}
-          Total Classes: ${totalClasses}
-          Valid Until: ${endDate.toLocaleDateString()}
-
-          You can now book fitness classes using your new package. Visit our website to get started!
-
-          Thank you for choosing GymXam.
-
-          Best regards,
-          The GymXam Team
-        `,
-        html: `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-            <h2>New Membership Package Assigned</h2>
-            <p>Hello ${client.name},</p>
-            <p>We're excited to inform you that a new membership package has been assigned to your account:</p>
-            <div style="background-color: #f7f7f7; padding: 15px; border-radius: 5px; margin: 15px 0;">
-              <p><strong>Package:</strong> ${packageDetails[packageType].name}</p>
-              <p><strong>Total Classes:</strong> ${totalClasses}</p>
-              <p><strong>Valid Until:</strong> ${endDate.toLocaleDateString()}</p>
-            </div>
-            <p>You can now book fitness classes using your new package. Visit our website to get started!</p>
-            <p>Thank you for choosing GymXam.</p>
-            <p>Best regards,<br>The GymXam Team</p>
-          </div>
-        `,
+        subject: "Your New GymXam Membership Package",
+        html: packageAssignedEmail({
+          name: client.name,
+          packageName: packageDetails[packageType].name,
+          totalClasses,
+          validUntil: endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        }),
       });
     } catch (emailError) {
       console.error("Error sending email:", emailError);

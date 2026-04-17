@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { sendEmail } from "@/lib/email"
+import { packageExpiringEmail } from "@/lib/email-templates"
 import { subDays, startOfWeek, endOfWeek } from "date-fns"
 
 export async function checkExpiringSubscriptions() {
@@ -51,54 +52,16 @@ export async function checkExpiringSubscriptions() {
         day: 'numeric'
       })
 
-      // Send email notification
       await sendEmail({
         to: packageData.user.email,
-        subject: "Your GymXam Subscription is Expiring in 2 Days",
-        text: `
-Dear ${packageData.user.name},
-
-Your GymXam subscription package will expire in 2 days on ${formattedEndDate}.
-
-Package Details:
-- Classes Remaining: ${packageData.classesRemaining}
-- Expiration Date: ${formattedEndDate}
-
-To ensure uninterrupted access to our classes, please renew your subscription before the expiration date.
-
-You can renew your subscription by visiting our website or contacting our front desk.
-
-Thank you for choosing GymXam!
-
-Best regards,
-The GymXam Team
-        `,
-        html: `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <h2>Your GymXam Subscription is Expiring Soon</h2>
-  
-  <p>Dear ${packageData.user.name},</p>
-  
-  <p>Your GymXam subscription package will expire in <strong>2 days</strong> on ${formattedEndDate}.</p>
-  
-  <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-    <h3 style="margin-top: 0;">Package Details:</h3>
-    <ul>
-      <li><strong>Classes Remaining:</strong> ${packageData.classesRemaining}</li>
-      <li><strong>Expiration Date:</strong> ${formattedEndDate}</li>
-    </ul>
-  </div>
-  
-  <p>To ensure uninterrupted access to our classes, please renew your subscription before the expiration date.</p>
-  
-  <p>You can renew your subscription by visiting our website or contacting our front desk.</p>
-  
-  <p>Thank you for choosing GymXam!</p>
-  
-  <p>Best regards,<br>
-  The GymXam Team</p>
-</div>
-        `
+        subject: "Your GymXam Membership Expires in 2 Days",
+        html: packageExpiringEmail({
+          name: packageData.user.name,
+          packageName: packageData.name,
+          classesRemaining: packageData.classesRemaining,
+          daysRemaining: 2,
+          expirationDate: formattedEndDate,
+        }),
       })
     }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth-middleware"
 import { db } from "@/lib/db"
 import { sendEmail } from "@/lib/email"
+import { classCancelledEmail } from "@/lib/email-templates"
 
 // PUT toggle class availability (admin only)
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
@@ -42,12 +43,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             }
           })
 
-          // Send email notification
           await sendEmail({
-              to: booking.user.email,
-              subject: "Class Cancelled",
-              text: `The class "${updatedClass.name}" on ${new Date(updatedClass.date).toLocaleDateString()} has been cancelled.`,
-              html: ""
+            to: booking.user.email,
+            subject: `Class Cancelled — ${updatedClass.name}`,
+            html: classCancelledEmail({
+              name: booking.user.name,
+              className: updatedClass.name,
+              date: new Date(updatedClass.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+            }),
           })
         }
       }

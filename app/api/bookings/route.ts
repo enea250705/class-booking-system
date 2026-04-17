@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth-middleware"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { sendEmail } from "@/lib/email"
+import { bookingConfirmationEmail } from "@/lib/email-templates"
 
 const bookingSchema = z.object({
   classId: z.string(),
@@ -222,34 +223,14 @@ export async function POST(request: Request) {
     console.log('Attempting to send booking confirmation email to:', user.email);
     const emailResult = await sendEmail({
       to: user.email,
-      subject: "Your GymXam Class Booking Confirmation",
-      text: `Thank you for booking ${classInfo.name}!
-      
-Class Details:
-- Class: ${classInfo.name}
-- Date: ${classDate}
-- Time: ${classInfo.time}
-- Classes Remaining: ${userPackage.classesRemaining - 1}
-
-You can cancel this booking up to 8 hours before the class starts.
-      
-Thank you for choosing GymXam!`,
-      html: `
-        <h2>Thank you for booking ${classInfo.name}!</h2>
-        <p>Your class has been successfully booked.</p>
-        
-        <h3>Class Details:</h3>
-        <ul>
-          <li><strong>Class:</strong> ${classInfo.name}</li>
-          <li><strong>Date:</strong> ${classDate}</li>
-          <li><strong>Time:</strong> ${classInfo.time}</li>
-          <li><strong>Classes Remaining:</strong> ${userPackage.classesRemaining - 1}</li>
-        </ul>
-        
-        <p>You can cancel this booking up to 8 hours before the class starts.</p>
-        
-        <p>Thank you for choosing GymXam!</p>
-      `
+      subject: `Booking Confirmed — ${classInfo.name}`,
+      html: bookingConfirmationEmail({
+        name: user.name,
+        className: classInfo.name,
+        date: classDate,
+        time: classInfo.time,
+        classesRemaining: userPackage.classesRemaining - 1,
+      }),
     });
     
     console.log('Email sending result:', emailResult);
