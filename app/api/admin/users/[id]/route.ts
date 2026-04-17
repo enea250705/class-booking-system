@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth-middleware';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await auth(request);
@@ -13,7 +13,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const targetUserId = params.id;
+    const { id: targetUserId } = await params;
 
     // Validate user exists
     const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
