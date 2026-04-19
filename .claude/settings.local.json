@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/check-week-apr6.mjs)",
+      "Bash(node -e \":*)",
+      "Bash(node scripts/fix-week-apr6.mjs)",
+      "Bash(node scripts/fix-week-apr6.mjs --apply)",
+      "Bash(node scripts/delete-easter-classes.mjs)",
+      "Bash(node scripts/delete-easter-classes.mjs --apply)",
+      "Bash(node scripts/fix-all-future-weeks.mjs)",
+      "Bash(node scripts/fix-all-future-weeks.mjs --apply)",
+      "Bash(npm install *)",
+      "Bash(npm list *)",
+      "Bash(node -e ' *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(node scripts/send-test-templates.mjs)"
+    ]
+  }
+}

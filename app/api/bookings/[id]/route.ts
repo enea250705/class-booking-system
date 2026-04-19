@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 // GET a specific booking
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await auth(request)
@@ -14,8 +14,9 @@ export async function GET(
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
+    const { id } = await params
     const booking = await prisma.booking.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         class: true,
         user: {
@@ -47,7 +48,7 @@ export async function GET(
 // DELETE - Cancel a booking (must be at least 8 hours before class)
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await auth(request)
@@ -56,7 +57,7 @@ export async function DELETE(
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const bookingId = params.id
+    const { id: bookingId } = await params
     
     // Find the booking
     const booking = await prisma.booking.findUnique({

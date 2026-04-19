@@ -14,12 +14,12 @@ function calculateDaysRemaining(endDate: Date): number {
 // POST - Send a reminder to a client about expiring package
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check if user is authenticated and is an admin
     const user = await auth(request);
-    
+
     if (!user || user.role !== "admin") {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -27,7 +27,7 @@ export async function POST(
       );
     }
 
-    const clientId = params.id;
+    const { id: clientId } = await params;
     
     // Get client with their active package
     const client = await prisma.user.findUnique({

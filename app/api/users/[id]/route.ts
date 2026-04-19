@@ -2,13 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth-middleware";
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Authenticate the request (optional, but recommended for security)
     const authenticatedUser = await auth(request);
-    
-    // Get the user ID from the path
-    const userId = params.id;
+
+    const { id: userId } = await params;
     
     if (!userId) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });

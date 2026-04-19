@@ -5,7 +5,7 @@ import { sendEmail } from "@/lib/email"
 import { bookingCancelledEmail } from "@/lib/email-templates"
 
 // PUT cancel a booking
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await auth(request)
 
@@ -13,7 +13,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Find the booking with class details
     const booking = await prisma.booking.findUnique({

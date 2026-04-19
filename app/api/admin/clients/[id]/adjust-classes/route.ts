@@ -5,11 +5,11 @@ const prisma = new PrismaClient();
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { packageId, newClassesRemaining, reason } = await request.json();
-    const clientId = params.id;
+    const { id: clientId } = await params;
 
     // Validate input
     if (!packageId || newClassesRemaining < 0) {

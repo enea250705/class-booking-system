@@ -5,19 +5,19 @@ import { auth } from "@/lib/auth-middleware";
 // POST - Activate a specific package by ID
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await auth(request);
-    
+
     if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
-    
-    const packageId = params.id;
+
+    const { id: packageId } = await params;
     
     // Check if the package exists and belongs to the user
     const packageToActivate = await prisma.package.findFirst({

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth-middleware"
 
 // PUT mark a notification as read
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await auth(request)
 
@@ -10,7 +10,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
 
     // In a real app, this would check if the notification exists and belongs to the user
     // const notification = await db.notification.findUnique({
@@ -43,7 +43,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     return NextResponse.json(updatedNotification)
   } catch (error) {
-    console.error(`Error marking notification ${params.id} as read:`, error)
+    console.error(`Error marking notification as read:`, error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }

@@ -11,12 +11,12 @@ type PackageType = 'starter' | 'basic' | 'premium';
 // POST - Assign a package to a client (admin only)
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check if user is authenticated and is an admin
     const user = await auth(request);
-    
+
     if (!user || user.role !== "admin") {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -24,7 +24,7 @@ export async function POST(
       );
     }
 
-    const clientId = params.id;
+    const { id: clientId } = await params;
     
     // Get request body
     const body = await request.json();

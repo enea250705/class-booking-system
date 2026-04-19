@@ -5,7 +5,7 @@ import { sendEmail } from "@/lib/email"
 import { classCancelledEmail } from "@/lib/email-templates"
 
 // PUT toggle class availability (admin only)
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await auth(request)
 
@@ -13,7 +13,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
     const { enabled } = await request.json()
 
     // Update the class in the database
